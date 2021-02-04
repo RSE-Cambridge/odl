@@ -15,6 +15,7 @@ from .detector import *
 from .geometry import *
 from .parallel import *
 from .spect import *
+from .siemens import *
 
 __all__ = ()
 __all__ += conebeam.__all__
@@ -22,3 +23,4 @@ __all__ += detector.__all__
 __all__ += geometry.__all__
 __all__ += parallel.__all__
 __all__ += spect.__all__
+__all__ += siemens.__all__

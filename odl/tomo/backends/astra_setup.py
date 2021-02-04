@@ -32,7 +32,7 @@ import numpy as np
 from odl.discr import DiscretizedSpace, DiscretizedSpaceElement
 from odl.tomo.geometry import (
     DivergentBeamGeometry, Flat1dDetector, Flat2dDetector, Geometry,
-    ParallelBeamGeometry)
+    ParallelBeamGeometry, TiltedBookletsGeometry)
 from odl.tomo.util.utility import euler_matrix
 
 try:
@@ -66,6 +66,7 @@ __all__ = (
     'astra_volume_geometry',
     'astra_conebeam_3d_geom_to_vec',
     'astra_conebeam_2d_geom_to_vec',
+    'astra_tiled_booklets_geom_to_vec',
     'astra_parallel_3d_geom_to_vec',
     'astra_projection_geometry',
     'astra_data',
@@ -397,6 +398,48 @@ def astra_conebeam_2d_geom_to_vec(geometry):
 
     return vectors
 
+def astra_tiled_booklets_geom_to_vec(geometry):
+    angles = geometry.angles
+    mid_pt = geometry.det_params.mid_pt
+    det_rows = geometry.det_partition.shape[0]
+
+    vectors = np.zeros((angles.shape[-1] * det_rows, 12))
+
+    # repeat angles to simulate 12 1-row acquisitions
+    angles = np.repeat(geometry.angles, det_rows)
+    # get params of central element of detector rows
+    dparams = geometry.det_partition.grid[0,:].points().transpose()
+    dparams[0] = geometry.det_partition.mid_pt[0]
+    # tile it for each acquisition
+    dparams = np.tile(dparams, len(geometry.angles))
+
+    # Ray direction = -(detector-to-source normal vector)
+    vectors[:, 0:3] = -geometry.det_to_src(angles, dparams)
+
+    # Center of the detector in 3D space
+    vectors[:, 3:6] = geometry.det_point_position(angles, mid_pt)
+
+    # Vectors from detector pixel (0, 0) to (1, 0) and (0, 0) to (0, 1)
+    # `det_axes` gives shape (N, 2, 3), swap to get (2, N, 3)
+    det_axes = np.moveaxis(geometry.det_axes(angles), -2, 0)
+    px_sizes = geometry.det_partition.cell_sides
+    # Swap detector axes to have better memory layout in  projection data.
+    # ASTRA produces `(v, theta, u)` layout, and to map to ODL layout
+    # `(theta, u, v)` a complete roll must be performed, which is the
+    # worst case (compeltely discontiguous).
+    # Instead we swap `u` and `v`, resulting in the effective ASTRA result
+    # `(u, theta, v)`. Here we only need to swap axes 0 and 1, which
+    # keeps at least contiguous blocks in `v`.
+    vectors[:, 9:12] = det_axes[0] * px_sizes[0]
+    vectors[:, 6:9] = det_axes[1] * px_sizes[1]
+
+    # ASTRA has (z, y, x) axis convention, in contrast to (x, y, z) in ODL,
+    # so we need to adapt to this by changing the order.
+    new_ind = []
+    for i in range(4):
+        new_ind += [2 + 3 * i, 1 + 3 * i, 0 + 3 * i]
+    vectors = vectors[:, new_ind]
+    return vectors
 
 def astra_parallel_3d_geom_to_vec(geometry):
     """Create vectors for ASTRA projection geometries from ODL geometry.
@@ -520,6 +563,15 @@ def astra_projection_geometry(geometry):
         det_row_count = geometry.det_partition.shape[0]
         det_col_count = geometry.det_partition.shape[1]
         vec = astra_parallel_3d_geom_to_vec(geometry)
+        proj_geom = astra.create_proj_geom('parallel3d_vec', det_row_count,
+                                           det_col_count, vec)
+
+    elif (isinstance(geometry, TiltedBookletsGeometry)):
+        print("Welcome to the new TiltedBookletsGeometry geometry")
+        # Swap detector axes (see astra_*_3d_to_vec)
+        det_row_count = 1
+        det_col_count = geometry.det_partition.shape[1]
+        vec = astra_tiled_booklets_geom_to_vec(geometry)
         proj_geom = astra.create_proj_geom('parallel3d_vec', det_row_count,
                                            det_col_count, vec)
 
