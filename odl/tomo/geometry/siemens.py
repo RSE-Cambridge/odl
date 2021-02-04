@@ -7,6 +7,7 @@ from odl.tomo.util import axis_rotation_matrix, is_inside_bounds
 from odl.tomo.util.utility import transform_system
 from odl.tomo.geometry.geometry import AxisOrientedGeometry, Geometry
 from odl.tomo.geometry.detector import Flat2dDetector
+from odl.util import array_str, indent, signature_string
 
 
 __all__ = ('BookletsGeometry', 'TiltedBookletsGeometry')
@@ -379,7 +380,7 @@ class TiltedBookletsGeometry(BookletsGeometry, AxisOrientedGeometry):
 
         # Broadcast translation along extra dimensions
         transl_slc = (None,) * extra_dims + (slice(None),)
-        
+
         # TODO: rm comments
         # refpt = (self.translation[transl_slc]
         #          + circle_component
