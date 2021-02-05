@@ -401,17 +401,22 @@ def astra_conebeam_2d_geom_to_vec(geometry):
 def astra_tiled_booklets_geom_to_vec(geometry):
     angles = geometry.angles
     mid_pt = geometry.det_params.mid_pt
-    det_rows = geometry.det_partition.shape[0]
+    det_rows = geometry.det_partition.shape[0] # comment below :(
 
     vectors = np.zeros((angles.shape[-1] * det_rows, 12))
+    print("astra_tiled_booklets_geom_to_vec - vectors", vectors.shape)
+
 
     # repeat angles to simulate 12 1-row acquisitions
     angles = np.repeat(geometry.angles, det_rows)
+    print("astra_tiled_booklets_geom_to_vec - angles", angles.shape)
     # get params of central element of detector rows
-    dparams = geometry.det_partition.grid[0,:].points().transpose()
-    dparams[0] = geometry.det_partition.mid_pt[0]
+    dparams = geometry.det_partition.grid[:,0].points().transpose()
+    dparams[1] = geometry.det_partition.mid_pt[1]
     # tile it for each acquisition
     dparams = np.tile(dparams, len(geometry.angles))
+    print("astra_tiled_booklets_geom_to_vec - dparams", dparams.shape)
+
 
     # Ray direction = -(detector-to-source normal vector)
     vectors[:, 0:3] = -geometry.det_to_src(angles, dparams)
@@ -650,6 +655,9 @@ def astra_data(astra_geom, datatype, data=None, ndim=2, allow_copy=False):
 
     # ASTRA checks if data is c-contiguous and aligned
     if data is not None:
+        print('astra_data - data', data.shape)
+        print('astra_data - astra_dtype_str', astra_dtype_str)
+        print('astra_data - astra_geom', astra_geom)
         if allow_copy:
             data_array = np.asarray(data, dtype='float32', order='C')
             return link(astra_dtype_str, astra_geom, data_array)

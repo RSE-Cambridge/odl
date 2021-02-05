@@ -24,7 +24,7 @@ from odl.tomo.backends.astra_setup import (
 from odl.tomo.backends.util import _add_default_complex_impl
 from odl.tomo.geometry import (
     ConeBeamGeometry, FanBeamGeometry, Geometry, Parallel2dGeometry,
-    Parallel3dAxisGeometry)
+    Parallel3dAxisGeometry, TiltedBookletsGeometry)
 
 try:
     import astra
@@ -139,10 +139,19 @@ class AstraCudaImpl:
             # see explanation in `astra_*_3d_geom_to_vec`.
             astra_proj_shape = (proj_shape[1], proj_shape[0], proj_shape[2])
             astra_vol_shape = self.vol_space.shape
+        print("create_ids - astra_proj_shape", astra_proj_shape)
+        print("create_ids - astra_vol_shape", astra_vol_shape)
+
+        if isinstance(self.geometry, TiltedBookletsGeometry):
+            v_angles = proj_shape[0] * proj_shape[1]
+            astra_proj_shape = (1, v_angles, proj_shape[2])
+        print("create_ids - astra_proj_shape", astra_proj_shape)
 
         self.vol_array = np.empty(astra_vol_shape, dtype='float32', order='C')
         self.proj_array = np.empty(astra_proj_shape, dtype='float32',
                                    order='C')
+        
+        
 
         # Create ASTRA data structures
         vol_geom = astra_volume_geometry(self.vol_space)
@@ -269,6 +278,7 @@ class AstraCudaImpl:
             back-projector. If ``out`` was provided, the returned object is a
             reference to it.
         """
+        print("_call_backward_real - proj_data", proj_data.shape)
         with self._mutex:
             assert proj_data in self.proj_space.real_space
 
@@ -282,10 +292,16 @@ class AstraCudaImpl:
                 astra.data2d.store(self.sino_id, proj_data.asarray())
             elif self.geometry.ndim == 3:
                 shape = (-1,) + self.geometry.det_partition.shape
+                if isinstance(self.geometry, TiltedBookletsGeometry):
+                    shape = (shape[0]*shape[1], 1, shape[2])
                 reshaped_proj_data = proj_data.asarray().reshape(shape)
+                print("_call_backward_real - reshaped_proj_data", reshaped_proj_data.shape)
+
                 swapped_proj_data = np.ascontiguousarray(
                     np.swapaxes(reshaped_proj_data, 0, 1)
                 )
+                print("_call_backward_real - swapped_proj_data", swapped_proj_data.shape)
+
                 astra.data3d.store(self.sino_id, swapped_proj_data)
 
             # Run algorithm
