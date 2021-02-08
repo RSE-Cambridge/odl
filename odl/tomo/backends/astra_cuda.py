@@ -143,8 +143,8 @@ class AstraCudaImpl:
         print("create_ids - astra_vol_shape", astra_vol_shape)
 
         if isinstance(self.geometry, TiltedBookletsGeometry):
-            v_angles = proj_shape[0] * proj_shape[1]
-            astra_proj_shape = (1, v_angles, proj_shape[2])
+            v_angles = proj_shape[0] * proj_shape[2]
+            astra_proj_shape = (1, v_angles, proj_shape[1])
         print("create_ids - astra_proj_shape", astra_proj_shape)
 
         self.vol_array = np.empty(astra_vol_shape, dtype='float32', order='C')
@@ -293,7 +293,7 @@ class AstraCudaImpl:
             elif self.geometry.ndim == 3:
                 shape = (-1,) + self.geometry.det_partition.shape
                 if isinstance(self.geometry, TiltedBookletsGeometry):
-                    shape = (shape[0]*shape[1], 1, shape[2])
+                    shape = (shape[0]*shape[2], 1, shape[1])
                 reshaped_proj_data = proj_data.asarray().reshape(shape)
                 print("_call_backward_real - reshaped_proj_data", reshaped_proj_data.shape)
 

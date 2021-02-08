@@ -401,7 +401,7 @@ def astra_conebeam_2d_geom_to_vec(geometry):
 def astra_tiled_booklets_geom_to_vec(geometry):
     angles = geometry.angles
     mid_pt = geometry.det_params.mid_pt
-    det_rows = geometry.det_partition.shape[0] # comment below :(
+    det_rows = geometry.det_partition.shape[1] # comment below :(
 
     vectors = np.zeros((angles.shape[-1] * det_rows, 12))
     print("astra_tiled_booklets_geom_to_vec - vectors", vectors.shape)
@@ -411,8 +411,8 @@ def astra_tiled_booklets_geom_to_vec(geometry):
     angles = np.repeat(geometry.angles, det_rows)
     print("astra_tiled_booklets_geom_to_vec - angles", angles.shape)
     # get params of central element of detector rows
-    dparams = geometry.det_partition.grid[:,0].points().transpose()
-    dparams[1] = geometry.det_partition.mid_pt[1]
+    dparams = geometry.det_partition.grid[0,:].points().transpose()
+    dparams[0] = geometry.det_partition.mid_pt[0]
     # tile it for each acquisition
     dparams = np.tile(dparams, len(geometry.angles))
     print("astra_tiled_booklets_geom_to_vec - dparams", dparams.shape)
@@ -435,8 +435,8 @@ def astra_tiled_booklets_geom_to_vec(geometry):
     # Instead we swap `u` and `v`, resulting in the effective ASTRA result
     # `(u, theta, v)`. Here we only need to swap axes 0 and 1, which
     # keeps at least contiguous blocks in `v`.
-    vectors[:, 9:12] = det_axes[0] * px_sizes[0]
-    vectors[:, 6:9] = det_axes[1] * px_sizes[1]
+    vectors[:, 9:12] = det_axes[1] * px_sizes[1]
+    vectors[:, 6:9] = det_axes[0] * px_sizes[0]
 
     # ASTRA has (z, y, x) axis convention, in contrast to (x, y, z) in ODL,
     # so we need to adapt to this by changing the order.
@@ -575,7 +575,8 @@ def astra_projection_geometry(geometry):
         print("Welcome to the new TiltedBookletsGeometry geometry")
         # Swap detector axes (see astra_*_3d_to_vec)
         det_row_count = 1
-        det_col_count = geometry.det_partition.shape[1]
+        det_col_count = geometry.det_partition.shape[0]
+        print("virtual detector: row - cols", det_row_count, det_col_count)
         vec = astra_tiled_booklets_geom_to_vec(geometry)
         proj_geom = astra.create_proj_geom('parallel3d_vec', det_row_count,
                                            det_col_count, vec)
