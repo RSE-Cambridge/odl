@@ -369,22 +369,11 @@ class TiltedBookletsGeometry(BookletsGeometry, AxisOrientedGeometry):
         # Increment along the source axis according to dparam[0]
         ## TODO rm comments and check dparam shape!!!!
         sparam = np.array(dparam[0], dtype=float, copy=False, ndmin=1)
-        print("sparam", sparam.shape)
         source_offset = sparam[:, None] * self.src_axis(angle)
-        print("self.src_axis(angle)", self.src_axis(angle).shape)
-        # source_offset = np.einsum('...ij,...j->...i',
-        #                              sparam, self.src_axis(angle))
-        # source_offset = np.multiply.outer(sparam, self.src_axis(angle))
-        # print("source_offset", source_offset.shape)
 
         # Broadcast translation along extra dimensions
         transl_slc = (None,) * extra_dims + (slice(None),)
-
-        # TODO: rm comments
-        # refpt = (self.translation[transl_slc]
-        #          + circle_component
-        #          + pitch_component)
-        # print("refpt.shape",refpt.shape)
+        
         refpt = (self.translation[transl_slc]
                  + circle_component
                  + pitch_component

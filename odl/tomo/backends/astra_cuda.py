@@ -139,14 +139,13 @@ class AstraCudaImpl:
             # see explanation in `astra_*_3d_geom_to_vec`.
             astra_proj_shape = (proj_shape[1], proj_shape[0], proj_shape[2])
             astra_vol_shape = self.vol_space.shape
-        print("create_ids - astra_proj_shape", astra_proj_shape)
-        print("create_ids - astra_vol_shape", astra_vol_shape)
 
         if isinstance(self.geometry, TiltedBookletsGeometry):
+            # N virtual angles = N angles * N det rows
             v_angles = proj_shape[0] * proj_shape[2]
+            # u and v are not swapped - 1 row detector
             astra_proj_shape = (1, v_angles, proj_shape[1])
-        print("create_ids - astra_proj_shape", astra_proj_shape)
-
+        
         self.vol_array = np.empty(astra_vol_shape, dtype='float32', order='C')
         self.proj_array = np.empty(astra_proj_shape, dtype='float32',
                                    order='C')
@@ -239,30 +238,19 @@ class AstraCudaImpl:
             astra.algorithm.run(self.algo_forward_id)
 
             # Copy result to host
-            print("_call_forward_real - out", out.shape)
-            print("_call_forward_real - self.proj_proj_array", self.proj_array.shape)
-
-
             if self.geometry.ndim == 2:
                 out[:] = self.proj_array
             elif self.geometry.ndim == 3:
                 if isinstance(self.geometry, TiltedBookletsGeometry):
+                    # reshape (1, theta * rows, cols) -> (angles, rows, cols)
                     tmp = self.proj_array.reshape((self.proj_space.shape[0],
                         self.proj_space.shape[2],self.proj_space.shape[1]))
-                    print("_call_forward_real - tmp", tmp.shape)
+                    # mvaxis (angles, rows, cols) -> (angles, cols, rows)
                     tmp = np.moveaxis(tmp, 1, 2)
-                    print("_call_forward_real - tmp", tmp.shape)
                     out[:] = tmp.reshape(
                         self.proj_space.shape)
-                # if isinstance(self.geometry, TiltedBookletsGeometry):
-                #     tmp = self.proj_array.reshape(
-                #         (self.proj_space.shape[2],)+self.proj_space.shape[:2])
-                #     print("_call_forward_real - tmp", tmp.shape)
-                #     tmp = np.moveaxis(tmp, 0, 2)
-                #     print("_call_forward_real - tmp", tmp.shape)
-                #     out[:] = tmp.reshape(
-                #         self.proj_space.shape)
                 else:
+                    # Swap (cols, angles, rows) -> (angles, cols, rows)
                     out[:] = np.swapaxes(self.proj_array, 0, 1).reshape(
                         self.proj_space.shape)
 
@@ -299,7 +287,6 @@ class AstraCudaImpl:
             back-projector. If ``out`` was provided, the returned object is a
             reference to it.
         """
-        print("_call_backward_real - proj_data", proj_data.shape)
         with self._mutex:
             assert proj_data in self.proj_space.real_space
 
@@ -314,20 +301,19 @@ class AstraCudaImpl:
             elif self.geometry.ndim == 3:
                 shape = (-1,) + self.geometry.det_partition.shape
                 if isinstance(self.geometry, TiltedBookletsGeometry):
+                    # mv ax (angles, cols, rows) -> (angles, rows, cols)
                     swapped_proj_data = np.moveaxis(proj_data.asarray(), 2, 1)
-                    print("_call_backward_real - swapped_proj_data", swapped_proj_data.shape)
+                    # reshape (angles, cols, rows) -> (1, angles * rows, cols)
                     shape = (1, shape[0]*shape[2], shape[1])
                     reshaped_proj_data = swapped_proj_data.reshape(shape)
-                    print("_call_backward_real - reshaped_proj_data", reshaped_proj_data.shape)
                     swapped_proj_data = np.ascontiguousarray(reshaped_proj_data)
                 else:
+                    # Reshape to (angles, cols, rows)
                     reshaped_proj_data = proj_data.asarray().reshape(shape)
-                    print("_call_backward_real - reshaped_proj_data", reshaped_proj_data.shape)
-
+                    # Swap (angles, cols, rows) -> (cols, angles, rows)
                     swapped_proj_data = np.ascontiguousarray(
                         np.swapaxes(reshaped_proj_data, 0, 1)
                     )
-                    print("_call_backward_real - swapped_proj_data", swapped_proj_data.shape)
 
                 astra.data3d.store(self.sino_id, swapped_proj_data)
 
