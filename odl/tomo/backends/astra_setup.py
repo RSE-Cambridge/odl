@@ -502,8 +502,10 @@ def astra_parallel_3d_geom_to_vec(geometry):
     # Instead we swap `u` and `v`, resulting in the effective ASTRA result
     # `(u, theta, v)`. Here we only need to swap axes 0 and 1, which
     # keeps at least contiguous blocks in `v`.
-    vectors[:, 9:12] = det_axes[0] * px_sizes[0]
-    vectors[:, 6:9] = det_axes[1] * px_sizes[1]
+    vectors[:, 6:9] = det_axes[0] * px_sizes[0]
+    vectors[:, 9:12] = det_axes[1] * px_sizes[1]
+    # vectors[:, 9:12] = det_axes[0] * px_sizes[0]
+    # vectors[:, 6:9] = det_axes[1] * px_sizes[1]
 
     # ASTRA has (z, y, x) axis convention, in contrast to (x, y, z) in ODL,
     # so we need to adapt to this by changing the order.
@@ -572,7 +574,6 @@ def astra_projection_geometry(geometry):
                                            det_col_count, vec)
 
     elif (isinstance(geometry, TiltedBookletsGeometry)):
-        print("Welcome to the new TiltedBookletsGeometry geometry")
         # Swap detector axes (see astra_*_3d_to_vec)
         det_row_count = 1
         det_col_count = geometry.det_partition.shape[0]

@@ -239,11 +239,32 @@ class AstraCudaImpl:
             astra.algorithm.run(self.algo_forward_id)
 
             # Copy result to host
+            print("_call_forward_real - out", out.shape)
+            print("_call_forward_real - self.proj_proj_array", self.proj_array.shape)
+
+
             if self.geometry.ndim == 2:
                 out[:] = self.proj_array
             elif self.geometry.ndim == 3:
-                out[:] = np.swapaxes(self.proj_array, 0, 1).reshape(
-                    self.proj_space.shape)
+                if isinstance(self.geometry, TiltedBookletsGeometry):
+                    tmp = self.proj_array.reshape((self.proj_space.shape[0],
+                        self.proj_space.shape[2],self.proj_space.shape[1]))
+                    print("_call_forward_real - tmp", tmp.shape)
+                    tmp = np.moveaxis(tmp, 1, 2)
+                    print("_call_forward_real - tmp", tmp.shape)
+                    out[:] = tmp.reshape(
+                        self.proj_space.shape)
+                # if isinstance(self.geometry, TiltedBookletsGeometry):
+                #     tmp = self.proj_array.reshape(
+                #         (self.proj_space.shape[2],)+self.proj_space.shape[:2])
+                #     print("_call_forward_real - tmp", tmp.shape)
+                #     tmp = np.moveaxis(tmp, 0, 2)
+                #     print("_call_forward_real - tmp", tmp.shape)
+                #     out[:] = tmp.reshape(
+                #         self.proj_space.shape)
+                else:
+                    out[:] = np.swapaxes(self.proj_array, 0, 1).reshape(
+                        self.proj_space.shape)
 
             # Fix scaling to weight by pixel size
             if (
@@ -293,14 +314,20 @@ class AstraCudaImpl:
             elif self.geometry.ndim == 3:
                 shape = (-1,) + self.geometry.det_partition.shape
                 if isinstance(self.geometry, TiltedBookletsGeometry):
-                    shape = (shape[0]*shape[2], 1, shape[1])
-                reshaped_proj_data = proj_data.asarray().reshape(shape)
-                print("_call_backward_real - reshaped_proj_data", reshaped_proj_data.shape)
+                    swapped_proj_data = np.moveaxis(proj_data.asarray(), 2, 1)
+                    print("_call_backward_real - swapped_proj_data", swapped_proj_data.shape)
+                    shape = (1, shape[0]*shape[2], shape[1])
+                    reshaped_proj_data = swapped_proj_data.reshape(shape)
+                    print("_call_backward_real - reshaped_proj_data", reshaped_proj_data.shape)
+                    swapped_proj_data = np.ascontiguousarray(reshaped_proj_data)
+                else:
+                    reshaped_proj_data = proj_data.asarray().reshape(shape)
+                    print("_call_backward_real - reshaped_proj_data", reshaped_proj_data.shape)
 
-                swapped_proj_data = np.ascontiguousarray(
-                    np.swapaxes(reshaped_proj_data, 0, 1)
-                )
-                print("_call_backward_real - swapped_proj_data", swapped_proj_data.shape)
+                    swapped_proj_data = np.ascontiguousarray(
+                        np.swapaxes(reshaped_proj_data, 0, 1)
+                    )
+                    print("_call_backward_real - swapped_proj_data", swapped_proj_data.shape)
 
                 astra.data3d.store(self.sino_id, swapped_proj_data)
 
