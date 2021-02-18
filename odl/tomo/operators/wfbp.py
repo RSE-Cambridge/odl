@@ -94,38 +94,37 @@ def wfbp_full(recon_space, geometry, proj_data):
     V_tot = np.empty(recon_space.shape, dtype='float32', order='C')
 
     x, y, z = recon_space.grid.coord_vectors
+
     # shapes: (x, 1, angles) + (1, y, angles) -> (x,y,angles)
     # given x,y,theta compute u = x*np.cos(theta) + y*np.sin(theta)
     us = (np.outer(x, np.cos(angles)).reshape((x.shape[0],1,1,angles.shape[0])) +
           np.outer(y, np.sin(angles)).reshape((1,y.shape[0],1,angles.shape[0])))
     ls = (np.outer(x, -np.sin(angles)).reshape((x.shape[0],1,1,angles.shape[0])) +
           np.outer(y, np.cos(angles)).reshape((1,y.shape[0],1,angles.shape[0])))
-    vs = (z.reshape((1,1,-1,1)) - zs_src) * R / (ls + geometry.src_radius)
-    
-    mask  = vs < v_min
-    mask += vs > v_max
 
-    # us = us[mask]
-    # vs = vs[mask]
     # get grid indices
     ius = ((us - u_min) // u_cell).astype(np.int16)
-    ivs = ((vs - v_min) // v_cell).astype(np.int16)
 
-    # Deal with ivs out of range
-    _proj_data = np.pad(proj_data, [(0,0),(0,0),(0,1)], mode='constant')
-    ivs[mask] = -1
-    print("_proj_data.shape",_proj_data.shape)
-    # # ithetas same shape as ius, for each (x,y,theta) provides the index of theta
-    ithetas = np.tile(np.arange(angles.shape[0]), (x.shape[0],y.shape[0],z.shape[0],1)).astype(np.int)
-    ius = np.tile(ius, (1,1,z.shape[0],1)).astype(np.int)
-    print("ithetas.shape",ithetas.shape)
-    print("ius.shape",ius.shape)
-    print("ivs.shape",ivs.shape)
+    # split z to avoid memory problems:
+    buffer_size = 16
+    for i in range(0, z.shape[0], buffer_size):
+        _z = z[i:i+buffer_size]
+        vs = (_z.reshape((1,1,-1,1)) - zs_src) * R / (ls + geometry.src_radius)
+    
+        mask  = vs < v_min
+        mask += vs > v_max
 
-    V = _proj_data[ithetas,ius,ivs]
-    print(V.shape)
-    V_tot = np.sum(V, axis=-1)
-    # # TODO: z is not considered!!! 
-    # V_tot = np.tile(np.expand_dims(single_slice,-1), (1, V_tot.shape[2]))
+    
+        ivs = ((vs - v_min) // v_cell).astype(np.int16)
+
+        # Deal with ivs out of range
+        _proj_data = np.pad(proj_data, [(0,0),(0,0),(0,1)], mode='constant')
+        ivs[mask] = -1
+        # ithetas same shape as ius, for each (x,y,theta) provides the index of theta
+        ithetas = np.tile(np.arange(angles.shape[0]), (x.shape[0],y.shape[0],_z.shape[0],1)).astype(np.int)
+        _ius = np.tile(ius, (1,1,_z.shape[0],1)).astype(np.int)
+
+        V = _proj_data[ithetas,_ius,ivs]
+        V_tot[:,:,i:i+buffer_size] = np.sum(V, axis=-1)
 
     return V_tot
