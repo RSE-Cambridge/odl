@@ -67,7 +67,7 @@ __all__ = (
     'astra_volume_geometry',
     'astra_conebeam_3d_geom_to_vec',
     'astra_conebeam_2d_geom_to_vec',
-    'astra_tiled_booklets_geom_to_vec',
+    'astra_tilted_booklets_geom_to_vec',
     'astra_parallel_3d_geom_to_vec',
     'astra_projection_geometry',
     'astra_data',
@@ -444,7 +444,7 @@ def astra_cone_tiled_booklets_geom_to_vec(geometry):
 
     return vectors
 
-def astra_tiled_booklets_geom_to_vec(geometry):
+def astra_tilted_booklets_geom_to_vec(geometry):
     """Create vectors for ASTRA projection geometries from ODL geometry.
 
     The 3D vectors are used to create an ASTRA projection geometry for
@@ -480,7 +480,6 @@ def astra_tiled_booklets_geom_to_vec(geometry):
        http://www.astra-toolbox.com/docs/geom3d.html#projection-geometries
     """
     angles = geometry.angles
-    mid_pt = geometry.det_params.mid_pt
     det_rows = geometry.det_partition.shape[1] # comment below :(
 
     vectors = np.zeros((angles.shape[-1] * det_rows, 12))
@@ -500,7 +499,7 @@ def astra_tiled_booklets_geom_to_vec(geometry):
     vectors[:, 0:3] = -geometry.det_to_src(angles, dparams)
 
     # Center of the detector in 3D space
-    vectors[:, 3:6] = geometry.det_point_position(angles, mid_pt)
+    vectors[:, 3:6] = geometry.det_point_position(angles, dparams)
 
     # Vectors from detector pixel (0, 0) to (1, 0) and (0, 0) to (0, 1)
     # `det_axes` gives shape (N, 2, 3), swap to get (2, N, 3)
@@ -659,7 +658,7 @@ def astra_projection_geometry(geometry):
         # Simulate 1 row detector parallel beam geometry
         det_row_count = 1
         det_col_count = geometry.det_partition.shape[0]
-        vec = astra_tiled_booklets_geom_to_vec(geometry)
+        vec = astra_tilted_booklets_geom_to_vec(geometry)
         proj_geom = astra.create_proj_geom('parallel3d_vec', det_row_count,
                                            det_col_count, vec)
 
