@@ -25,7 +25,6 @@ from odl.tomo.backends.util import _add_default_complex_impl
 from odl.tomo.geometry import (
     ConeBeamGeometry, FanBeamGeometry, Geometry, Parallel2dGeometry,
     Parallel3dAxisGeometry, TiltedBookletsGeometry)
-from odl.tomo.geometry.siemensv2 import ConeTiltedBookletsGeometry
 
 try:
     import astra
@@ -146,10 +145,6 @@ class AstraCudaImpl:
             v_angles = proj_shape[0] * proj_shape[2]
             # u and v are not swapped - 1 row detector
             astra_proj_shape = (1, v_angles, proj_shape[1])
-        
-        elif isinstance(self.geometry, ConeTiltedBookletsGeometry):
-            v_angles = proj_shape[0] * proj_shape[1]
-            astra_proj_shape = (1, v_angles, proj_shape[2])
 
         self.vol_array = np.empty(astra_vol_shape, dtype='float32', order='C')
         self.proj_array = np.empty(astra_proj_shape, dtype='float32',
@@ -254,11 +249,6 @@ class AstraCudaImpl:
                     tmp = np.moveaxis(tmp, 1, 2)
                     out[:] = tmp.reshape(
                         self.proj_space.shape)
-
-                elif isinstance(self.geometry, ConeTiltedBookletsGeometry):
-                    tmp = self.proj_array.reshape(self.proj_space.shape)
-                    out[:] = np.swapaxes(self.proj_array, 0, 1).reshape(
-                        self.proj_space.shape)
                 
                 else:
                     # Swap (cols, angles, rows) -> (angles, cols, rows)
@@ -318,13 +308,6 @@ class AstraCudaImpl:
                     # reshape (angles, cols, rows) -> (1, angles * rows, cols)
                     shape = (1, shape[0]*shape[2], shape[1])
                     reshaped_proj_data = swapped_proj_data.reshape(shape)
-                    swapped_proj_data = np.ascontiguousarray(reshaped_proj_data)
-                
-                elif isinstance(self.geometry, ConeTiltedBookletsGeometry):
-                    # swapped_proj_data = np.moveaxis(proj_data.asarray(), 2, 1)
-                    # print("_call_backward_real - swapped_proj_data", swapped_proj_data.shape)
-                    shape = (1, shape[0]*shape[1], shape[2])
-                    reshaped_proj_data = proj_data.asarray().reshape(shape)
                     swapped_proj_data = np.ascontiguousarray(reshaped_proj_data)
                 
                 else:
