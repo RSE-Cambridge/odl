@@ -70,13 +70,19 @@ def wfbp_full_torch(recon_space, geometry, proj_data, dtype=torch.float32):
     _ivs = ((vs - v_min) / v_cell)
     _ivs_delta = (z[1] - z[0]) * R / (ls + geometry.src_radius) / v_cell
     del vs, ls
+
+    i_v_min = torch.tensor(0, dtype=dtype)
+    i_v_max = torch.tensor(proj_data.shape[2], dtype=dtype)
+    i_repalce = torch.tensor(-1, dtype=dtype)
     
     # split z to avoid memory problems:
     for i,_z in enumerate(z):
 
+        mask = _ivs < i_v_min
+        mask += _ivs >= i_v_max
+        _ivs.masked_fill_( mask , i_repalce)
+
         ivs = _ivs.to(torch.int64)
-        ivs = torch.where(ivs > 0, ivs, -1)
-        ivs = torch.where(ivs < proj_data.shape[2], ivs, -1)
 
 
         V = _proj_data[ithetas,ius,ivs]
