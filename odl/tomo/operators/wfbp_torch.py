@@ -93,3 +93,49 @@ def wfbp_full_torch(recon_space, geometry, proj_data, dtype=torch.float32):
         _ivs += _ivs_delta
 
     return V_tot.cpu()
+
+
+def wfbp_angles(recon_space, geometry, proj_data, dtype=torch.float32):
+
+    cuda = torch.device('cuda')
+    _proj_data = np.pad(proj_data, [(0,0),(0,0),(0,1)], mode='constant')    
+    _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
+    angles = torch.tensor(geometry.angles, dtype=dtype, device=cuda)
+    
+    zs_src = angles * geometry.pitch / (2 * np.pi)
+
+    R = geometry.det_radius + geometry.src_radius
+
+    u_min, v_min = geometry.det_partition.min_pt
+    u_max, v_max = geometry.det_partition.max_pt
+    u_cell, v_cell = geometry.det_partition.cell_sides
+
+    x, y, z = recon_space.grid.coord_vectors
+    x = torch.tensor(x, dtype=dtype, device=cuda)
+    y = torch.tensor(y, dtype=dtype, device=cuda)
+    z = torch.tensor(z, dtype=dtype, device=cuda)
+    z = z.reshape((1, 1, -1))
+
+    V_tot = torch.zeros(recon_space.shape, dtype=dtype, device=cuda)
+
+    us = ( torch.outer(x, torch.cos(angles)).reshape((angles.shape[0], x.shape[0], 1, 1)) +
+           torch.outer(y, torch.sin(angles)).reshape((angles.shape[0], 1, y.shape[0], 1)))
+    ls = (torch.outer(x, -torch.sin(angles)).reshape((angles.shape[0], x.shape[0], 1, 1)) +
+           torch.outer(y, torch.cos(angles)).reshape((angles.shape[0], 1, y.shape[0], 1)))
+    ls += geometry.src_radius
+
+    # get grid indices
+    _ius = ((us - u_min) // u_cell).to(torch.int64)
+    del us, x, y
+
+
+    for i,theta in enumerate(angles):
+        ius = _ius[i]
+        vs = (z - zs_src[i]) * R / ls[i]
+        ivs = ((vs - v_min) / v_cell).to(torch.int64)
+        ivs = torch.where(ivs >= 0, ivs, -1)
+        ivs = torch.where(ivs < proj_data.shape[2], ivs, -1)
+
+        V_tot += _proj_data[i,ius,ivs]
+
+    return V_tot.cpu()
