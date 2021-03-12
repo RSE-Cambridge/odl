@@ -12,12 +12,14 @@ from odl.tomo.geometry import Geometry
 def wfbp_full_torch(recon_space, geometry, proj_data, dtype=torch.float32):
     """
     Torch implementation of WFBP - TODO: improve performances
-    TODO: COPYING THE OUTPUT BACK TO CPU IS TOO SLOW
+    TODO: CHECK DIFFERENT LAYOUT OF proj_data
 
-    Tested on det: (736,64) angles: 500 volume: (512,512,96) ~ 3.7 s (3.4 s float16)
+    Tested on det: (736,64) angles: 500 volume: (512,512,96) ~ 2.9 s (2.5 s float16)
 
-    Note: uncomment code to change V memory layout (x, y, z, angles) -> (angles, x, y, z)
-    Tested on det: (736,64) angles: 500 volume: (512,512,96) ~ 3.5 s (3.2 s float16)
+    Notes:
+    * uncomment code to change V memory layout (x, y, z, angles) -> (angles, x, y, z)
+    Tested on det: (736,64) angles: 500 volume: (512,512,96) ~ 2.6 s (2.2 s float16)
+    * Fixed reconstruction slice thickness!
     """
 
     cuda = torch.device('cuda')
@@ -96,7 +98,15 @@ def wfbp_full_torch(recon_space, geometry, proj_data, dtype=torch.float32):
 
 
 def wfbp_angles(recon_space, geometry, proj_data, dtype=torch.float32):
+    """
+    Torch implementation of WFBP - Loop over angles
 
+    Tested on det: (736,64) angles: 500 volume: (512,512,96) ~ 2.9 s (2.5 s float16)
+
+    Notes:
+    * Varaible slice thickness.
+    * could the indices be computed for half turn only?
+    """
     cuda = torch.device('cuda')
     _proj_data = np.pad(proj_data, [(0,0),(0,0),(0,1)], mode='constant')    
     _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
@@ -118,23 +128,30 @@ def wfbp_angles(recon_space, geometry, proj_data, dtype=torch.float32):
 
     V_tot = torch.zeros(recon_space.shape, dtype=dtype, device=cuda)
 
-    us = ( torch.outer(x, torch.cos(angles)).reshape((angles.shape[0], x.shape[0], 1, 1)) +
-           torch.outer(y, torch.sin(angles)).reshape((angles.shape[0], 1, y.shape[0], 1)))
-    ls = (torch.outer(x, -torch.sin(angles)).reshape((angles.shape[0], x.shape[0], 1, 1)) +
-           torch.outer(y, torch.cos(angles)).reshape((angles.shape[0], 1, y.shape[0], 1)))
+    # shapes: (angles, x, 1, 1) + (angles, 1, y, 1) -> (angles, x, y, 1)
+    us = (torch.outer(torch.cos(angles), x).reshape((angles.shape[0], x.shape[0], 1, 1)) +
+          torch.outer(torch.sin(angles), y).reshape((angles.shape[0], 1, y.shape[0], 1)))
+    ls = (torch.outer(-torch.sin(angles), x).reshape((angles.shape[0], x.shape[0], 1, 1)) +
+          torch.outer(torch.cos(angles), y).reshape((angles.shape[0], 1, y.shape[0], 1)))
     ls += geometry.src_radius
 
     # get grid indices
     _ius = ((us - u_min) // u_cell).to(torch.int64)
     del us, x, y
 
+    i_v_min = torch.tensor(0, dtype=dtype)
+    i_v_max = torch.tensor(proj_data.shape[2], dtype=dtype)
+    i_repalce = torch.tensor(-1, dtype=dtype)
 
-    for i,theta in enumerate(angles):
+    for i in range(angles.shape[0]):
         ius = _ius[i]
         vs = (z - zs_src[i]) * R / ls[i]
-        ivs = ((vs - v_min) / v_cell).to(torch.int64)
-        ivs = torch.where(ivs >= 0, ivs, -1)
-        ivs = torch.where(ivs < proj_data.shape[2], ivs, -1)
+
+        _ivs = (vs - v_min) / v_cell
+        mask = _ivs < i_v_min
+        mask += _ivs >= i_v_max
+        _ivs.masked_fill_( mask , i_repalce)
+        ivs = _ivs.to(torch.int64)
 
         V_tot += _proj_data[i,ius,ivs]
 
