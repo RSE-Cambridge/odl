@@ -29,7 +29,6 @@ def wfbp_full_torch(recon_space, geometry, proj_data, dtype=torch.float32):
     
     zs_src = angles * geometry.pitch / (2 * np.pi)
     zs_src = zs_src.reshape((1,1,-1))
-#     zs_src = zs_src.reshape((-1,1,1))
     R = geometry.det_radius + geometry.src_radius
 
     u_min, v_min = geometry.det_partition.min_pt
@@ -44,11 +43,8 @@ def wfbp_full_torch(recon_space, geometry, proj_data, dtype=torch.float32):
 
     V_tot = torch.empty(recon_space.shape, dtype=dtype, device=cuda)
     V = torch.empty((x.shape[0],y.shape[0],angles.shape[0]), dtype=dtype, device=cuda)
-    # V = torch.empty((angles.shape[0],x.shape[0],y.shape[0]), dtype=dtype, device=cuda)
 
     ithetas = np.tile(np.arange(angles.shape[0]), (x.shape[0],y.shape[0],1))
-#     shape = (angles.shape[0],x.shape[0],y.shape[0])
-#     ithetas = np.repeat(np.arange(shape[0]), np.prod(shape[1:])).reshape(shape)
     ithetas = torch.tensor(ithetas, dtype=torch.int64, device=cuda)
     
     
@@ -58,11 +54,6 @@ def wfbp_full_torch(recon_space, geometry, proj_data, dtype=torch.float32):
           torch.outer(y, torch.sin(angles)).reshape((1,y.shape[0],angles.shape[0])))
     ls = (torch.outer(x, -torch.sin(angles)).reshape((x.shape[0],1,angles.shape[0])) +
           torch.outer(y, torch.cos(angles)).reshape((1,y.shape[0],angles.shape[0])))
-    
-#     us = (torch.outer(torch.cos(angles), x).reshape((angles.shape[0],x.shape[0],1)) +
-#           torch.outer(torch.sin(angles), y).reshape((angles.shape[0],1,y.shape[0])))
-#     ls = (torch.outer(-torch.sin(angles), x).reshape((angles.shape[0],x.shape[0],1)) +
-#           torch.outer(torch.cos(angles), y).reshape((angles.shape[0],1,y.shape[0])))
     
     # get grid indices
     ius = ((us - u_min) // u_cell).to(torch.int64)
@@ -90,7 +81,6 @@ def wfbp_full_torch(recon_space, geometry, proj_data, dtype=torch.float32):
         V = _proj_data[ithetas,ius,ivs]
         
         V_tot[:,:,i] = torch.sum(V, axis=-1)
-#         V_tot[:,:,i] = torch.sum(V, axis=0)
         
         _ivs += _ivs_delta
 
@@ -154,5 +144,116 @@ def wfbp_angles(recon_space, geometry, proj_data, dtype=torch.float32):
         ivs = _ivs.to(torch.int64)
 
         V_tot += _proj_data[i,ius,ivs]
+
+    return V_tot.cpu()
+
+
+
+def wfbp_angles_in_mem(recon_space, geometry, _proj_data, dtype=torch.float32):
+    """
+    Requires: 
+    _proj_data = np.pad(proj_data, [(0,0),(0,0),(0,1)], mode='constant')    
+    _proj_data = torch.tensor(_proj_data, dtype=dtype, device=torch.device('cuda'))
+    """
+    cuda = torch.device('cuda')
+    angles = torch.tensor(geometry.angles, dtype=dtype, device=cuda)
+    
+    zs_src = angles * geometry.pitch / (2 * np.pi)
+
+    R = geometry.det_radius + geometry.src_radius
+
+    u_min, v_min = geometry.det_partition.min_pt
+    u_max, v_max = geometry.det_partition.max_pt
+    u_cell, v_cell = geometry.det_partition.cell_sides
+
+    x, y, z = recon_space.grid.coord_vectors
+    x = torch.tensor(x, dtype=dtype, device=cuda)
+    y = torch.tensor(y, dtype=dtype, device=cuda)
+    z = torch.tensor(z, dtype=dtype, device=cuda)
+    z = z.reshape((1, 1, -1))
+
+    V_tot = torch.zeros(recon_space.shape, dtype=dtype, device=cuda)
+
+    # shapes: (angles, x, 1, 1) + (angles, 1, y, 1) -> (angles, x, y, 1)
+    us = (torch.outer(torch.cos(angles), x).reshape((angles.shape[0], x.shape[0], 1, 1)) +
+          torch.outer(torch.sin(angles), y).reshape((angles.shape[0], 1, y.shape[0], 1)))
+    ls = (torch.outer(-torch.sin(angles), x).reshape((angles.shape[0], x.shape[0], 1, 1)) +
+          torch.outer(torch.cos(angles), y).reshape((angles.shape[0], 1, y.shape[0], 1)))
+    ls += geometry.src_radius
+
+    # get grid indices
+    _ius = ((us - u_min) // u_cell).to(torch.int64)
+    del us, x, y
+
+    i_v_min = torch.tensor(0, dtype=dtype)
+    i_v_max = torch.tensor(_proj_data.shape[2]-1, dtype=dtype)
+    i_repalce = torch.tensor(-1, dtype=dtype)
+
+    for i in range(angles.shape[0]):
+        ius = _ius[i]
+        vs = (z - zs_src[i]) * R / ls[i]
+
+        _ivs = (vs - v_min) / v_cell
+        mask = _ivs < i_v_min
+        mask += _ivs >= i_v_max
+        _ivs.masked_fill_( mask , i_repalce)
+        ivs = _ivs.to(torch.int64)
+
+        V_tot += _proj_data[i,ius,ivs]
+
+    return V_tot.cpu()
+
+
+def wfbp_angles_proj_chunk(recon_space, geometry, proj_data, dtype=torch.float32):
+    """
+    Load proj_data on GPU inside the loop
+    """
+    cuda = torch.device('cuda')
+    angles = torch.tensor(geometry.angles, dtype=dtype, device=cuda)
+    
+    zs_src = angles * geometry.pitch / (2 * np.pi)
+
+    R = geometry.det_radius + geometry.src_radius
+
+    u_min, v_min = geometry.det_partition.min_pt
+    u_max, v_max = geometry.det_partition.max_pt
+    u_cell, v_cell = geometry.det_partition.cell_sides
+
+    x, y, z = recon_space.grid.coord_vectors
+    x = torch.tensor(x, dtype=dtype, device=cuda)
+    y = torch.tensor(y, dtype=dtype, device=cuda)
+    z = torch.tensor(z, dtype=dtype, device=cuda)
+    z = z.reshape((1, 1, -1))
+
+    V_tot = torch.zeros(recon_space.shape, dtype=dtype, device=cuda)
+
+    # shapes: (angles, x, 1, 1) + (angles, 1, y, 1) -> (angles, x, y, 1)
+    us = (torch.outer(torch.cos(angles), x).reshape((angles.shape[0], x.shape[0], 1, 1)) +
+          torch.outer(torch.sin(angles), y).reshape((angles.shape[0], 1, y.shape[0], 1)))
+    ls = (torch.outer(-torch.sin(angles), x).reshape((angles.shape[0], x.shape[0], 1, 1)) +
+          torch.outer(torch.cos(angles), y).reshape((angles.shape[0], 1, y.shape[0], 1)))
+    ls += geometry.src_radius
+
+    # get grid indices
+    _ius = ((us - u_min) // u_cell).to(torch.int64)
+    del us, x, y
+
+    i_v_min = torch.tensor(0, dtype=dtype)
+    i_v_max = torch.tensor(proj_data.shape[2], dtype=dtype)
+    i_repalce = torch.tensor(-1, dtype=dtype)
+
+    for i in range(angles.shape[0]):
+        _proj_data = np.pad(proj_data[i], [(0,0),(0,1)], mode='constant')    
+        _proj_data = torch.tensor(_proj_data, dtype=dtype, device=torch.device('cuda'))
+        ius = _ius[i]
+        vs = (z - zs_src[i]) * R / ls[i]
+
+        _ivs = (vs - v_min) / v_cell
+        mask = _ivs < i_v_min
+        mask += _ivs >= i_v_max
+        _ivs.masked_fill_( mask , i_repalce)
+        ivs = _ivs.to(torch.int64)
+
+        V_tot += _proj_data[ius,ivs]
 
     return V_tot.cpu()

@@ -8,7 +8,7 @@ import torch.autograd.profiler as profiler
 from time import perf_counter
 from odl.tomo.geometry.siemens import TiltedBookletsGeometry
 from odl.tomo.operators.w_ import *
-from odl.tomo.operators.wfbp_torch import wfbp_full_torch
+from odl.tomo.operators.wfbp_torch import *
 
 import sys
 print(sys.version)
@@ -60,11 +60,35 @@ proj_data = ray_trafo(phantom)
 stop = perf_counter()
 print(f'FW done after:\t\t{(stop-start):.3f} seconds')
 
+name = 'ANGLES In memory'
+dtype= torch.float16
+print(f'{name.ljust(20)[:20]}', end='\t')
+print(f'{dtype}', end='\t')
+_proj_data = np.pad(proj_data, [(0,0),(0,0),(0,1)], mode='constant')    
+_proj_data = torch.tensor(_proj_data, dtype=dtype, device=torch.device('cuda'))
+torch.cuda.synchronize()
+start = perf_counter()
+_ = wfbp_angles_in_mem(reco_space, geometry=tilted, _proj_data=_proj_data, dtype=dtype)
+torch.cuda.synchronize()
+
+stop = perf_counter()
+print(f'{(stop-start):.3f} s', end='\t')
+
+print(f'{torch.cuda.max_memory_allocated(0)//(2**20)}'.rjust(6)+
+    f' / {torch.cuda.memory_reserved(0)//(2**20)}  MB', end='\t')
+print(f'Allocated: {torch.cuda.memory_allocated(0)//(2**20)} MB', end='\n')
+torch.cuda.reset_peak_memory_stats(0)
+
+
 
 #### TORCH
 
-test_list = [(wfbp_full_torch, 'ORIGINAL', torch.float16),
+test_list = [(wfbp_angles_proj_chunk, 'ANGLES Proj chunk', torch.float16),
+            (wfbp_angles_proj_chunk, 'ANGLES Proj chunk', torch.float32),
+            (wfbp_full_torch, 'ORIGINAL', torch.float16),
             (wfbp_full_torch, 'ORIGINAL', torch.float32),
+            (wfbp_angles, 'ANGLES', torch.float16),
+            (wfbp_angles, 'ANGLES', torch.float32),
             (w_a_last, 'Angles LAST', torch.float16),
             (w_a_last, 'Angles LAST', torch.float32),
             (w_a_first, 'Angles FIRST', torch.float16),
@@ -116,6 +140,13 @@ test_list = [(w_angles_tvu, 'ANGLES (theta, v, u)', torch.float16),
 
 for f, name, dtype in test_list:
     benchmark_f(f, name, dtype, reco_space, geometry=tilted, proj_data=_proj_data)
+
+
+
+
+
+
+##### PROFILER
 
 # with profiler.profile(with_stack=True, profile_memory=True, use_cuda=True) as prof:
 #     with profiler.record_function("angles last"):

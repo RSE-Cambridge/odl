@@ -10,17 +10,7 @@ from odl.discr import DiscretizedSpace
 from odl.tomo.geometry import Geometry
 
 def w_a_last(recon_space, geometry, proj_data, sync=False, dtype=torch.float32):
-    """
-    Torch implementation of WFBP - TODO: improve performances
-    TODO: COPYING THE OUTPUT BACK TO CPU IS TOO SLOW
-
-    Tested on det: (736,64) angles: 500 volume: (512,512,96) ~ 4.1 s (0.48s + copy)
-
-    Note: uncomment code to change V memory layout (x, y, z, angles) -> (angles, x, y, z)
-    Tested on det: (736,64) angles: 500 volume: (512,512,96) ~ 3.8 s (0.90s + copy)
-    copying data to CPU is faster.. why?
-    """
-
+    '''_zxy'''
     cuda = torch.device('cuda')
     _proj_data = np.pad(proj_data, [(0,0),(0,0),(0,1)], mode='constant')    
     _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
@@ -40,7 +30,8 @@ def w_a_last(recon_space, geometry, proj_data, sync=False, dtype=torch.float32):
     y = torch.tensor(y, dtype=dtype, device=cuda)
     z = torch.tensor(z, dtype=dtype, device=cuda)
 
-    V_tot = torch.empty(recon_space.shape, dtype=dtype, device=cuda)
+    shape = (z.shape[0], x.shape[0], y.shape[0])
+    V_tot = torch.empty(shape, dtype=dtype, device=cuda)
     V = torch.empty((x.shape[0],y.shape[0],angles.shape[0]), dtype=dtype, device=cuda)
 
         
@@ -88,7 +79,7 @@ def w_a_last(recon_space, geometry, proj_data, sync=False, dtype=torch.float32):
         if sync:
             torch.cuda.synchronize()
 
-        V_tot[:,:,i] = torch.sum(V, axis=-1)
+        V_tot[i] = torch.sum(V, axis=-1)
 
         if sync:
             torch.cuda.synchronize()
@@ -101,17 +92,7 @@ def w_a_last(recon_space, geometry, proj_data, sync=False, dtype=torch.float32):
 
 
 def w_a_first(recon_space, geometry, proj_data, sync=False, dtype=torch.float32):
-    """
-    Torch implementation of WFBP - TODO: improve performances
-    TODO: COPYING THE OUTPUT BACK TO CPU IS TOO SLOW
-
-    Tested on det: (736,64) angles: 500 volume: (512,512,96) ~ 4.1 s (0.48s + copy)
-
-    Note: uncomment code to change V memory layout (x, y, z, angles) -> (angles, x, y, z)
-    Tested on det: (736,64) angles: 500 volume: (512,512,96) ~ 3.8 s (0.90s + copy)
-    copying data to CPU is faster.. why?
-    """
-
+ 
     cuda = torch.device('cuda')
     _proj_data = np.pad(proj_data, [(0,0),(0,0),(0,1)], mode='constant')    
     _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
@@ -243,17 +224,6 @@ def w_angles(recon_space, geometry, proj_data, dtype=torch.float32):
 
 
 def w_utv(recon_space, geometry, proj_data, sync=False, dtype=torch.float32):
-    """
-    Torch implementation of WFBP - TODO: improve performances
-    TODO: COPYING THE OUTPUT BACK TO CPU IS TOO SLOW
-
-    Tested on det: (736,64) angles: 500 volume: (512,512,96) ~ 4.1 s (0.48s + copy)
-
-    Note: uncomment code to change V memory layout (x, y, z, angles) -> (angles, x, y, z)
-    Tested on det: (736,64) angles: 500 volume: (512,512,96) ~ 3.8 s (0.90s + copy)
-    copying data to CPU is faster.. why?
-    """
-
     cuda = torch.device('cuda')
     _proj_data = np.pad(proj_data, [(0,0),(0,0),(0,1)], mode='constant')    
     _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
@@ -517,14 +487,14 @@ def w_angles_tvu(recon_space, geometry, proj_data, dtype=torch.float32):
     return V_tot.cpu()
 
 
-def w_angles_vtu_vec(recon_space, geometry, proj_data, dtype=torch.float32, t_chunk=30):
+def w_angles_tvu_zxy(recon_space, geometry, proj_data, dtype=torch.float32):
 
     cuda = torch.device('cuda')
-    _proj_data = np.pad(proj_data, [(0,1),(0,0),(0,0)], mode='constant')    
+    _proj_data = np.pad(proj_data, [(0,0),(0,1),(0,0)], mode='constant')    
     _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
     angles = torch.tensor(geometry.angles, dtype=dtype, device=cuda)
     
-    zs_src = (angles * geometry.pitch / (2 * np.pi)).reshape((-1, 1, 1, 1))
+    zs_src = angles * geometry.pitch / (2 * np.pi)
 
     R = geometry.det_radius + geometry.src_radius
 
@@ -536,15 +506,16 @@ def w_angles_vtu_vec(recon_space, geometry, proj_data, dtype=torch.float32, t_ch
     x = torch.tensor(x, dtype=dtype, device=cuda)
     y = torch.tensor(y, dtype=dtype, device=cuda)
     z = torch.tensor(z, dtype=dtype, device=cuda)
-    z = z.reshape((1, 1, 1, -1))
+    z = z.reshape((-1, 1, 1))
 
-    V_tot = torch.zeros(recon_space.shape, dtype=dtype, device=cuda)
+    shape = (z.shape[0], x.shape[0], y.shape[0])
+    V_tot = torch.zeros(shape, dtype=dtype, device=cuda)
 
     # shapes: (angles, x, 1, 1) + (angles, 1, y, 1) -> (angles, x, y, 1)
-    us = (torch.outer(torch.cos(angles), x).reshape((angles.shape[0], x.shape[0], 1, 1)) +
-          torch.outer(torch.sin(angles), y).reshape((angles.shape[0], 1, y.shape[0], 1)))
-    ls = (torch.outer(-torch.sin(angles), x).reshape((angles.shape[0], x.shape[0], 1, 1)) +
-          torch.outer(torch.cos(angles), y).reshape((angles.shape[0], 1, y.shape[0], 1)))
+    us = (torch.outer(torch.cos(angles), x).reshape((angles.shape[0], 1, x.shape[0], 1)) +
+          torch.outer(torch.sin(angles), y).reshape((angles.shape[0], 1, 1, y.shape[0])))
+    ls = (torch.outer(-torch.sin(angles), x).reshape((angles.shape[0], 1, x.shape[0], 1)) +
+          torch.outer(torch.cos(angles), y).reshape((angles.shape[0], 1, 1, y.shape[0])))
     ls += geometry.src_radius
 
     # get grid indices
@@ -552,13 +523,13 @@ def w_angles_vtu_vec(recon_space, geometry, proj_data, dtype=torch.float32, t_ch
     del us, x, y
 
     i_v_min = torch.tensor(0, dtype=dtype)
-    i_v_max = torch.tensor(proj_data.shape[0], dtype=dtype)
+    i_v_max = torch.tensor(proj_data.shape[1], dtype=dtype)
     i_repalce = torch.tensor(-1, dtype=dtype)
 
-    for i in range(0,angles.shape[0],t_chunk):
-        ius = _ius[i:i+t_chunk]
-
-        vs = (z - zs_src[i:i+t_chunk]) * R / ls[i:i+t_chunk]
+    for i in range(angles.shape[0]):
+        ius = _ius[i]
+        # print(z.shape, zs_src[i].shape, ls[i].shape)
+        vs = (z - zs_src[i]) * R / ls[i]
 
         _ivs = (vs - v_min) / v_cell
         mask = _ivs < i_v_min
@@ -566,8 +537,6 @@ def w_angles_vtu_vec(recon_space, geometry, proj_data, dtype=torch.float32, t_ch
         _ivs.masked_fill_( mask , i_repalce)
         ivs = _ivs.to(torch.int64)
 
-        itheta = torch.arange(i, min(i+t_chunk,angles.shape[0]) ).reshape((-1, 1, 1, 1))
-
-        V_tot += torch.sum(_proj_data[ivs,itheta,ius], axis=0)
-
+        V_tot += _proj_data[i,ivs,ius]
+    
     return V_tot.cpu()
