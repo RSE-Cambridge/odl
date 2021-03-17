@@ -5,15 +5,23 @@ from collections import OrderedDict
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 from odl.discr import DiscretizedSpace
 from odl.tomo.geometry import Geometry
 
-def w_a_last(recon_space, geometry, proj_data, sync=False, dtype=torch.float32):
+def w_a_last(recon_space, geometry, proj_data, sync=False,
+                dtype=torch.float32, in_mem=False):
     '''_zxy'''
     cuda = torch.device('cuda')
-    _proj_data = np.pad(proj_data, [(0,0),(0,0),(0,1)], mode='constant')    
-    _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
+
+    if isinstance(proj_data, torch.Tensor):
+        _proj_data = proj_data.cuda()
+        _proj_data = F.pad(_proj_data, (0,1), mode='constant', value=0)
+    else:
+        _proj_data = np.pad(proj_data, [(0,0),(0,0),(0,1)], mode='constant')
+        _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
+
     angles = torch.tensor(geometry.angles, dtype=dtype, device=cuda)
     
     zs_src = angles * geometry.pitch / (2 * np.pi)
@@ -88,14 +96,24 @@ def w_a_last(recon_space, geometry, proj_data, sync=False, dtype=torch.float32):
     
     # print(V.dtype, V_tot.dtype, ivs.dtype, _ivs.dtype, _ivs_delta.dtype)
 
-    return V_tot.cpu()
+    if in_mem:
+        return V_tot
+    else:
+        return V_tot.cpu()
 
 
-def w_a_first(recon_space, geometry, proj_data, sync=False, dtype=torch.float32):
+def w_a_first(recon_space, geometry, proj_data, sync=False,
+                dtype=torch.float32, in_mem=False):
  
     cuda = torch.device('cuda')
-    _proj_data = np.pad(proj_data, [(0,0),(0,0),(0,1)], mode='constant')    
-    _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
+
+    if isinstance(proj_data, torch.Tensor):
+        _proj_data = proj_data.cuda()
+        _proj_data = F.pad(_proj_data, (0,1), mode='constant', value=0)
+    else:
+        _proj_data = np.pad(proj_data, [(0,0),(0,0),(0,1)], mode='constant')
+        _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
+
     angles = torch.tensor(geometry.angles, dtype=dtype, device=cuda)
     
     zs_src = angles * geometry.pitch / (2 * np.pi)
@@ -165,14 +183,24 @@ def w_a_first(recon_space, geometry, proj_data, sync=False, dtype=torch.float32)
         
         _ivs += _ivs_delta
 
-    return V_tot.cpu()
+    if in_mem:
+        return V_tot
+    else:
+        return V_tot.cpu()
 
 
-def w_angles(recon_space, geometry, proj_data, dtype=torch.float32):
+def w_angles(recon_space, geometry, proj_data,
+                dtype=torch.float32, in_mem=False):
 
     cuda = torch.device('cuda')
-    _proj_data = np.pad(proj_data, [(0,0),(0,0),(0,1)], mode='constant')    
-    _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
+
+    if isinstance(proj_data, torch.Tensor):
+        _proj_data = proj_data.cuda()
+        _proj_data = F.pad(_proj_data, (0,1), mode='constant', value=0)
+    else:
+        _proj_data = np.pad(proj_data, [(0,0),(0,0),(0,1)], mode='constant')
+        _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
+
     angles = torch.tensor(geometry.angles, dtype=dtype, device=cuda)
     
     zs_src = angles * geometry.pitch / (2 * np.pi)
@@ -218,15 +246,25 @@ def w_angles(recon_space, geometry, proj_data, dtype=torch.float32):
 
         V_tot += _proj_data[i,ius,ivs]
 
-    return V_tot.cpu()
+    if in_mem:
+        return V_tot
+    else:
+        return V_tot.cpu()
 
 
 
 
-def w_utv(recon_space, geometry, proj_data, sync=False, dtype=torch.float32):
+def w_utv(recon_space, geometry, proj_data, sync=False,
+                dtype=torch.float32, in_mem=False):
     cuda = torch.device('cuda')
-    _proj_data = np.pad(proj_data, [(0,0),(0,0),(0,1)], mode='constant')    
-    _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
+
+    if isinstance(proj_data, torch.Tensor):
+        _proj_data = proj_data.cuda()
+        _proj_data = F.pad(_proj_data, (0,1), mode='constant', value=0)
+    else:
+        _proj_data = np.pad(proj_data, [(0,0),(0,0),(0,1)], mode='constant')
+        _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
+
     angles = torch.tensor(geometry.angles, dtype=dtype, device=cuda)
     
     zs_src = angles * geometry.pitch / (2 * np.pi)
@@ -300,12 +338,22 @@ def w_utv(recon_space, geometry, proj_data, sync=False, dtype=torch.float32):
     
     # print(V.dtype, V_tot.dtype, ivs.dtype, _ivs.dtype, _ivs_delta.dtype)
 
-    return V_tot.cpu()
+    if in_mem:
+        return V_tot
+    else:
+        return V_tot.cpu()
 
-def w_vtu(recon_space, geometry, proj_data, sync=False, dtype=torch.float32):
+def w_vtu(recon_space, geometry, proj_data, sync=False,
+                dtype=torch.float32, in_mem=False):
     cuda = torch.device('cuda')
-    _proj_data = np.pad(proj_data, [(0,1),(0,0),(0,0)], mode='constant')
-    _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
+
+    if isinstance(proj_data, torch.Tensor):
+        _proj_data = proj_data.cuda()
+        _proj_data = F.pad(_proj_data, (0,1,0,0,0,0), mode='constant', value=0)
+    else:
+        _proj_data = np.pad(proj_data, [(0,1),(0,0),(0,0)], mode='constant')
+        _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
+
     angles = torch.tensor(geometry.angles, dtype=dtype, device=cuda)
     
     zs_src = angles * geometry.pitch / (2 * np.pi)
@@ -380,15 +428,25 @@ def w_vtu(recon_space, geometry, proj_data, sync=False, dtype=torch.float32):
     
     # print(V.dtype, V_tot.dtype, ivs.dtype, _ivs.dtype, _ivs_delta.dtype)
 
-    return V_tot.cpu()
+    if in_mem:
+        return V_tot
+    else:
+        return V_tot.cpu()
 
-def w_angles_vtu(recon_space, geometry, proj_data, dtype=torch.float32):
+def w_angles_vtu(recon_space, geometry, proj_data,
+                dtype=torch.float32, in_mem=False):
 
     cuda = torch.device('cuda')
-    _proj_data = np.pad(proj_data, [(0,1),(0,0),(0,0)], mode='constant')    
-    _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
+
+    if isinstance(proj_data, torch.Tensor):
+        _proj_data = proj_data.cuda()
+        _proj_data = F.pad(_proj_data, (0,1,0,0,0,0), mode='constant', value=0)
+    else:
+        _proj_data = np.pad(proj_data, [(0,1),(0,0),(0,0)], mode='constant')
+        _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
+
     angles = torch.tensor(geometry.angles, dtype=dtype, device=cuda)
-    
+  
     zs_src = angles * geometry.pitch / (2 * np.pi)
 
     R = geometry.det_radius + geometry.src_radius
@@ -432,13 +490,23 @@ def w_angles_vtu(recon_space, geometry, proj_data, dtype=torch.float32):
 
         V_tot += _proj_data[ivs,i,ius]
 
-    return V_tot.cpu()
+    if in_mem:
+        return V_tot
+    else:
+        return V_tot.cpu()
 
-def w_angles_tvu(recon_space, geometry, proj_data, dtype=torch.float32):
+def w_angles_tvu(recon_space, geometry, proj_data,
+                dtype=torch.float32, in_mem=False):
 
     cuda = torch.device('cuda')
-    _proj_data = np.pad(proj_data, [(0,0),(0,1),(0,0)], mode='constant')    
-    _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
+
+    if isinstance(proj_data, torch.Tensor):
+        _proj_data = proj_data.cuda()
+        _proj_data = F.pad(_proj_data, (0,1,0,0), mode='constant', value=0)
+    else:
+        _proj_data = np.pad(proj_data, [(0,0),(0,1),(0,0)], mode='constant')
+        _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
+
     angles = torch.tensor(geometry.angles, dtype=dtype, device=cuda)
     
     zs_src = angles * geometry.pitch / (2 * np.pi)
@@ -484,14 +552,24 @@ def w_angles_tvu(recon_space, geometry, proj_data, dtype=torch.float32):
 
         V_tot += _proj_data[i,ivs,ius]
 
-    return V_tot.cpu()
+    if in_mem:
+        return V_tot
+    else:
+        return V_tot.cpu()
 
 
-def w_angles_tvu_zxy(recon_space, geometry, proj_data, dtype=torch.float32):
+def w_angles_tvu_zxy(recon_space, geometry, proj_data,
+                dtype=torch.float32, in_mem=False):
 
     cuda = torch.device('cuda')
-    _proj_data = np.pad(proj_data, [(0,0),(0,1),(0,0)], mode='constant')    
-    _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
+
+    if isinstance(proj_data, torch.Tensor):
+        _proj_data = proj_data.cuda()
+        _proj_data = F.pad(_proj_data, (0,1,0,0), mode='constant', value=0)
+    else:
+        _proj_data = np.pad(proj_data, [(0,0),(0,1),(0,0)], mode='constant')
+        _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
+
     angles = torch.tensor(geometry.angles, dtype=dtype, device=cuda)
     
     zs_src = angles * geometry.pitch / (2 * np.pi)
@@ -539,4 +617,7 @@ def w_angles_tvu_zxy(recon_space, geometry, proj_data, dtype=torch.float32):
 
         V_tot += _proj_data[i,ivs,ius]
     
-    return V_tot.cpu()
+    if in_mem:
+        return V_tot
+    else:
+        return V_tot.cpu()

@@ -5,11 +5,14 @@ from collections import OrderedDict
 
 import numpy as np
 import torch
+import torch.nn.functional as F
+
 
 from odl.discr import DiscretizedSpace
 from odl.tomo.geometry import Geometry
 
-def wfbp_full_torch(recon_space, geometry, proj_data, dtype=torch.float32):
+def wfbp_full_torch(recon_space, geometry, proj_data,
+                    dtype=torch.float32, in_mem=False):
     """
     Torch implementation of WFBP - TODO: improve performances
     TODO: CHECK DIFFERENT LAYOUT OF proj_data
@@ -23,8 +26,14 @@ def wfbp_full_torch(recon_space, geometry, proj_data, dtype=torch.float32):
     """
 
     cuda = torch.device('cuda')
-    _proj_data = np.pad(proj_data, [(0,0),(0,0),(0,1)], mode='constant')    
-    _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
+
+    if isinstance(proj_data, torch.Tensor):
+        _proj_data = proj_data.cuda()
+        _proj_data = F.pad(_proj_data, (0,1), mode='constant', value=0)
+    else:
+        _proj_data = np.pad(proj_data, [(0,0),(0,0),(0,1)], mode='constant')
+        _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
+
     angles = torch.tensor(geometry.angles, dtype=dtype, device=cuda)
     
     zs_src = angles * geometry.pitch / (2 * np.pi)
@@ -84,10 +93,14 @@ def wfbp_full_torch(recon_space, geometry, proj_data, dtype=torch.float32):
         
         _ivs += _ivs_delta
 
-    return V_tot.cpu()
+    if in_mem:
+        return V_tot
+    else:
+        return V_tot.cpu()
 
 
-def wfbp_angles(recon_space, geometry, proj_data, dtype=torch.float32):
+def wfbp_angles(recon_space, geometry, proj_data,
+                dtype=torch.float32, in_mem=False):
     """
     Torch implementation of WFBP - Loop over angles
 
@@ -98,8 +111,14 @@ def wfbp_angles(recon_space, geometry, proj_data, dtype=torch.float32):
     * could the indices be computed for half turn only?
     """
     cuda = torch.device('cuda')
-    _proj_data = np.pad(proj_data, [(0,0),(0,0),(0,1)], mode='constant')    
-    _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
+    
+    if isinstance(proj_data, torch.Tensor):
+        _proj_data = proj_data.cuda()
+        _proj_data = F.pad(_proj_data, (0,1), mode='constant', value=0)
+    else:
+        _proj_data = np.pad(proj_data, [(0,0),(0,0),(0,1)], mode='constant')
+        _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
+
     angles = torch.tensor(geometry.angles, dtype=dtype, device=cuda)
     
     zs_src = angles * geometry.pitch / (2 * np.pi)
@@ -145,11 +164,15 @@ def wfbp_angles(recon_space, geometry, proj_data, dtype=torch.float32):
 
         V_tot += _proj_data[i,ius,ivs]
 
-    return V_tot.cpu()
+    if in_mem:
+        return V_tot
+    else:
+        return V_tot.cpu()
 
 
 
-def wfbp_angles_in_mem(recon_space, geometry, _proj_data, dtype=torch.float32):
+def wfbp_angles_in_mem(recon_space, geometry, _proj_data,
+                    dtype=torch.float32, in_mem=False):
     """
     Requires: 
     _proj_data = np.pad(proj_data, [(0,0),(0,0),(0,1)], mode='constant')    
@@ -201,10 +224,14 @@ def wfbp_angles_in_mem(recon_space, geometry, _proj_data, dtype=torch.float32):
 
         V_tot += _proj_data[i,ius,ivs]
 
-    return V_tot.cpu()
+    if in_mem:
+        return V_tot
+    else:
+        return V_tot.cpu()
 
 
-def wfbp_angles_proj_chunk(recon_space, geometry, proj_data, dtype=torch.float32):
+def wfbp_angles_proj_chunk(recon_space, geometry, proj_data,
+                    dtype=torch.float32, in_mem=False):
     """
     Load proj_data on GPU inside the loop
     """
@@ -243,8 +270,12 @@ def wfbp_angles_proj_chunk(recon_space, geometry, proj_data, dtype=torch.float32
     i_repalce = torch.tensor(-1, dtype=dtype)
 
     for i in range(angles.shape[0]):
-        _proj_data = np.pad(proj_data[i], [(0,0),(0,1)], mode='constant')    
-        _proj_data = torch.tensor(_proj_data, dtype=dtype, device=torch.device('cuda'))
+        if isinstance(proj_data, torch.Tensor):
+            _proj_data = proj_data[i].cuda()
+            _proj_data = F.pad(_proj_data, (0,1), mode='constant', value=0)
+        else:
+            _proj_data = np.pad(proj_data[i], [(0,0),(0,1)], mode='constant')
+            _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
         ius = _ius[i]
         vs = (z - zs_src[i]) * R / ls[i]
 
@@ -256,4 +287,7 @@ def wfbp_angles_proj_chunk(recon_space, geometry, proj_data, dtype=torch.float32
 
         V_tot += _proj_data[ius,ivs]
 
-    return V_tot.cpu()
+    if in_mem:
+        return V_tot
+    else:
+        return V_tot.cpu()
