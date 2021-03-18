@@ -43,7 +43,7 @@ def w_a_last(recon_space, geometry, proj_data, sync=False,
     V = torch.empty((x.shape[0],y.shape[0],angles.shape[0]), dtype=dtype, device=cuda)
 
         
-    ithetas = np.tile(np.arange(angles.shape[0]), (x.shape[0],y.shape[0],1))
+    ithetas = np.arange(angles.shape[0]).reshape((1,1,-1))
     ithetas = torch.tensor(ithetas, dtype=torch.int64, device=cuda)
     
     
@@ -133,8 +133,7 @@ def w_a_first(recon_space, geometry, proj_data, sync=False,
     
     V = torch.empty((angles.shape[0],x.shape[0],y.shape[0]), dtype=dtype, device=cuda)
 
-    shape = (angles.shape[0],x.shape[0],y.shape[0])
-    ithetas = np.repeat(np.arange(shape[0]), np.prod(shape[1:])).reshape(shape)
+    ithetas = np.arange(angles.shape[0]).reshape((-1,1,1))
     ithetas = torch.tensor(ithetas, dtype=torch.int64, device=cuda)
     
     
@@ -285,7 +284,7 @@ def w_utv(recon_space, geometry, proj_data, sync=False,
     V = torch.empty((x.shape[0],y.shape[0],angles.shape[0]), dtype=dtype, device=cuda)
 
         
-    ithetas = np.tile(np.arange(angles.shape[0]), (x.shape[0],y.shape[0],1))
+    ithetas = np.arange(angles.shape[0]).reshape((1,1,-1))
     ithetas = torch.tensor(ithetas, dtype=torch.int64, device=cuda)
     
     
@@ -373,8 +372,7 @@ def w_vtu(recon_space, geometry, proj_data, sync=False,
     V_tot = torch.empty(z.shape[0], x.shape[0], y.shape[0], dtype=dtype, device=cuda)
     V = torch.empty((x.shape[0],y.shape[0],angles.shape[0]), dtype=dtype, device=cuda)
 
-        
-    ithetas = np.tile(np.arange(angles.shape[0]), (x.shape[0],y.shape[0],1))
+    ithetas = np.arange(angles.shape[0]).reshape((1,1,-1))
     ithetas = torch.tensor(ithetas, dtype=torch.int64, device=cuda)
     
     

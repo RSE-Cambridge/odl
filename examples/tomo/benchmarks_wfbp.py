@@ -145,7 +145,9 @@ _proj_data = np.moveaxis(proj_data, 2, 1).copy()
 print(f'\nPROJ SHAPE: {_proj_data.shape}')
 
 test_list = [(w_angles_tvu, 'ANGLES (theta, v, u)', torch.float16),
-            (w_angles_tvu, 'ANGLES (theta, v, u)', torch.float32)]
+            (w_angles_tvu, 'ANGLES (theta, v, u)', torch.float32),
+            (w_angles_tvu_zxy, 'ANGLES z(theta, v, u)', torch.float16),
+            (w_angles_tvu_zxy, 'ANGLES z(theta, v, u)', torch.float32)]
 
 # test_list = []
 print(f'\nLOAD TO GPU')
