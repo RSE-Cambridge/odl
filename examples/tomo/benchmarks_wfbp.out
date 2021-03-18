@@ -1,0 +1,86 @@
+3.7.9 (default, Aug 31 2020, 12:42:55) 
+[GCC 7.3.0]
+1.0.0.dev0
+Angles: 1000
+Reconstruction space: (512, 512, 24)
+FW done after:		3.483 seconds
+
+PROJ SHAPE: (1000, 736, 64)
+
+LOAD TO GPU
+wfbp_torch_z             	torch.float16	1.262 s	   946 / 1134  MB	Allocated: 0 MB
+wfbp_torch_z             	torch.float32	1.438 s	  1267 / 1634  MB	Allocated: 0 MB
+wfbp_torch_angles        	torch.float16	1.149 s	   649 / 1634  MB	Allocated: 0 MB
+wfbp_torch_angles        	torch.float32	1.396 s	   844 / 1634  MB	Allocated: 0 MB
+wfbp_torch_full          	torch.float16	1.364 s	  7555 / 11234  MB	Allocated: 0 MB
+wfbp_torch_full          	torch.float32	1.569 s	  9031 / 13154  MB	Allocated: 0 MB
+wfbp_torch_z_zxy         	torch.float16	1.227 s	   946 / 13154  MB	Allocated: 0 MB
+wfbp_torch_z_zxy         	torch.float32	1.401 s	  1267 / 13154  MB	Allocated: 0 MB
+wfbp_torch_z_zxy_tuv     	torch.float16	1.016 s	  2096 / 13154  MB	Allocated: 0 MB
+wfbp_torch_z_zxy_tuv     	torch.float32	1.203 s	  3567 / 15554  MB	Allocated: 0 MB
+wfbp_torch_z_zxy_tuv_full	torch.float16	1.447 s	  7535 / 15554  MB	Allocated: 0 MB
+wfbp_torch_z_zxy_tuv_full	torch.float32	1.647 s	  8991 / 15554  MB	Allocated: 0 MB
+w_a_last                 	torch.float16	1.778 s	  8353 / 10354  MB	Allocated: 0 MB
+w_a_last                 	torch.float32	1.698 s	 10456 / 14354  MB	Allocated: 0 MB
+w_a_first                	torch.float16	1.013 s	  8353 / 14354  MB	Allocated: 0 MB
+w_a_first                	torch.float32	1.202 s	 10456 / 14354  MB	Allocated: 0 MB
+w_angles                 	torch.float16	1.215 s	  3603 / 14354  MB	Allocated: 0 MB
+w_angles                 	torch.float32	1.446 s	  5206 / 14354  MB	Allocated: 0 MB
+
+IN MEMORY
+wfbp_torch_z             	torch.float16	1.185 s	  1035 / 14354  MB	Allocated: 101 MB
+wfbp_torch_z             	torch.float32	1.378 s	  1446 / 14354  MB	Allocated: 203 MB
+wfbp_torch_angles        	torch.float16	1.135 s	   739 / 14354  MB	Allocated: 101 MB
+wfbp_torch_angles        	torch.float32	1.370 s	  1023 / 14354  MB	Allocated: 203 MB
+wfbp_torch_full          	torch.float16	1.349 s	  7645 / 14354  MB	Allocated: 101 MB
+wfbp_torch_full          	torch.float32	1.547 s	  9210 / 14354  MB	Allocated: 203 MB
+wfbp_torch_z_zxy         	torch.float16	1.163 s	  1035 / 14354  MB	Allocated: 101 MB
+wfbp_torch_z_zxy         	torch.float32	1.344 s	  1446 / 14354  MB	Allocated: 203 MB
+wfbp_torch_z_zxy_tuv     	torch.float16	0.947 s	  2185 / 14354  MB	Allocated: 101 MB
+wfbp_torch_z_zxy_tuv     	torch.float32	1.141 s	  3746 / 14354  MB	Allocated: 203 MB
+wfbp_torch_z_zxy_tuv_full	torch.float16	1.378 s	  7625 / 14354  MB	Allocated: 101 MB
+wfbp_torch_z_zxy_tuv_full	torch.float32	1.590 s	  9170 / 14354  MB	Allocated: 203 MB
+w_a_last                 	torch.float16	1.367 s	  8443 / 14354  MB	Allocated: 101 MB
+w_a_last                 	torch.float32	1.596 s	 10636 / 14354  MB	Allocated: 203 MB
+w_a_first                	torch.float16	0.930 s	  8443 / 14354  MB	Allocated: 101 MB
+w_a_first                	torch.float32	1.126 s	 10636 / 14354  MB	Allocated: 203 MB
+w_angles                 	torch.float16	1.116 s	  3693 / 14354  MB	Allocated: 101 MB
+w_angles                 	torch.float32	1.370 s	  5386 / 14354  MB	Allocated: 203 MB
+
+PROJ SHAPE: (736, 1000, 64)
+
+LOAD TO GPU
+w_utv                    	torch.float16	1.358 s	  8353 / 14354  MB	Allocated: 0 MB
+w_utv                    	torch.float32	1.627 s	 10456 / 14354  MB	Allocated: 0 MB
+
+IN MEMORY
+w_utv                    	torch.float16	1.274 s	  8443 / 14354  MB	Allocated: 101 MB
+w_utv                    	torch.float32	1.545 s	 10636 / 14354  MB	Allocated: 203 MB
+
+PROJ SHAPE: (64, 1000, 736)
+
+LOAD TO GPU
+w_vtu                    	torch.float16	1.130 s	  8353 / 14354  MB	Allocated: 0 MB
+w_vtu                    	torch.float32	1.330 s	 10456 / 14354  MB	Allocated: 0 MB
+w_angles_vtu             	torch.float16	1.212 s	  3603 / 14354  MB	Allocated: 0 MB
+w_angles_vtu             	torch.float32	1.442 s	  5206 / 14354  MB	Allocated: 0 MB
+
+IN MEMORY
+w_vtu                    	torch.float16	1.052 s	  8441 / 14354  MB	Allocated: 101 MB
+w_vtu                    	torch.float32	1.259 s	 10633 / 14354  MB	Allocated: 203 MB
+w_angles_vtu             	torch.float16	1.131 s	  3691 / 14354  MB	Allocated: 101 MB
+w_angles_vtu             	torch.float32	1.371 s	  5383 / 14354  MB	Allocated: 203 MB
+
+PROJ SHAPE: (1000, 64, 736)
+
+LOAD TO GPU
+w_angles_tvu             	torch.float16	1.210 s	  3603 / 14354  MB	Allocated: 0 MB
+w_angles_tvu             	torch.float32	1.439 s	  5206 / 14354  MB	Allocated: 0 MB
+w_angles_tvu_zxy         	torch.float16	1.206 s	  3603 / 14354  MB	Allocated: 0 MB
+w_angles_tvu_zxy         	torch.float32	1.451 s	  5206 / 14354  MB	Allocated: 0 MB
+
+IN MEMORY
+w_angles_tvu             	torch.float16	1.131 s	  3691 / 14354  MB	Allocated: 101 MB
+w_angles_tvu             	torch.float32	1.371 s	  5383 / 14354  MB	Allocated: 203 MB
+w_angles_tvu_zxy         	torch.float16	1.127 s	  3691 / 14354  MB	Allocated: 101 MB
+w_angles_tvu_zxy         	torch.float32	1.384 s	  5383 / 14354  MB	Allocated: 203 MB

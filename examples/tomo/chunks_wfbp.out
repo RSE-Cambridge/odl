@@ -1,0 +1,83 @@
+3.7.9 (default, Aug 31 2020, 12:42:55) 
+[GCC 7.3.0]
+1.0.0.dev0
+Angles: 8000
+Reconstruction space: (512, 512, 24)
+Projection data filename: data/8000_512_512_24.npy
+Propjection data loaded.
+
+PROJ SHAPE: (8000, 736, 64)
+
+LOAD TO GPU
+wfbp_torch_z        	torch.float16	10	13.12 s	   105 / 134  MB	Allocated: 0 MB
+wfbp_torch_z        	torch.float16	50	10.58 s	   484 / 690  MB	Allocated: 0 MB
+wfbp_torch_z        	torch.float16	100	10.03 s	   947 / 1290  MB	Allocated: 0 MB
+wfbp_torch_z        	torch.float16	500	10.89 s	  4682 / 6790  MB	Allocated: 0 MB
+wfbp_torch_z        	torch.float16	1000	11.62 s	  9353 / 12790  MB	Allocated: 0 MB
+wfbp_torch_z        	torch.float32	10	15.34 s	   149 / 12790  MB	Allocated: 0 MB
+wfbp_torch_z        	torch.float32	50	12.18 s	   645 / 12790  MB	Allocated: 0 MB
+wfbp_torch_z        	torch.float32	100	11.45 s	  1268 / 12790  MB	Allocated: 0 MB
+wfbp_torch_z        	torch.float32	500	12.63 s	  6240 / 12790  MB	Allocated: 0 MB
+wfbp_torch_angles   	torch.float16	10	9.52 s	   175 / 12790  MB	Allocated: 0 MB
+wfbp_torch_angles   	torch.float16	50	9.18 s	   372 / 12790  MB	Allocated: 0 MB
+wfbp_torch_angles   	torch.float16	100	9.15 s	   649 / 12790  MB	Allocated: 0 MB
+wfbp_torch_angles   	torch.float16	500	9.19 s	  2885 / 12790  MB	Allocated: 0 MB
+wfbp_torch_angles   	torch.float16	1000	9.21 s	  5681 / 12790  MB	Allocated: 0 MB
+wfbp_torch_angles   	torch.float32	10	11.44 s	   230 / 12790  MB	Allocated: 0 MB
+wfbp_torch_angles   	torch.float32	50	11.12 s	   485 / 12790  MB	Allocated: 0 MB
+wfbp_torch_angles   	torch.float32	100	11.13 s	   844 / 12790  MB	Allocated: 0 MB
+wfbp_torch_angles   	torch.float32	500	11.14 s	  3717 / 12790  MB	Allocated: 0 MB
+wfbp_torch_z_zxy    	torch.float16	10	11.43 s	   105 / 12790  MB	Allocated: 0 MB
+wfbp_torch_z_zxy    	torch.float16	50	10.24 s	   484 / 12790  MB	Allocated: 0 MB
+wfbp_torch_z_zxy    	torch.float16	100	9.87 s	   947 / 12790  MB	Allocated: 0 MB
+wfbp_torch_z_zxy    	torch.float16	500	10.88 s	  4682 / 12790  MB	Allocated: 0 MB
+wfbp_torch_z_zxy    	torch.float16	1000	11.61 s	  9353 / 12790  MB	Allocated: 0 MB
+wfbp_torch_z_zxy    	torch.float32	10	12.67 s	   149 / 12790  MB	Allocated: 0 MB
+wfbp_torch_z_zxy    	torch.float32	50	11.65 s	   645 / 12790  MB	Allocated: 0 MB
+wfbp_torch_z_zxy    	torch.float32	100	11.19 s	  1268 / 12790  MB	Allocated: 0 MB
+wfbp_torch_z_zxy    	torch.float32	500	12.59 s	  6240 / 12790  MB	Allocated: 0 MB
+wfbp_torch_z_zxy_tuv	torch.float16	10	13.59 s	   105 / 12792  MB	Allocated: 0 MB
+wfbp_torch_z_zxy_tuv	torch.float16	50	8.99 s	   484 / 12792  MB	Allocated: 0 MB
+wfbp_torch_z_zxy_tuv	torch.float16	100	8.50 s	   947 / 12792  MB	Allocated: 0 MB
+wfbp_torch_z_zxy_tuv	torch.float16	500	8.21 s	  4682 / 12792  MB	Allocated: 0 MB
+wfbp_torch_z_zxy_tuv	torch.float32	10	14.68 s	   149 / 12792  MB	Allocated: 0 MB
+wfbp_torch_z_zxy_tuv	torch.float32	50	10.47 s	   645 / 12792  MB	Allocated: 0 MB
+wfbp_torch_z_zxy_tuv	torch.float32	100	9.93 s	  1268 / 12792  MB	Allocated: 0 MB
+wfbp_torch_z_zxy_tuv	torch.float32	200	9.85 s	  2510 / 12792  MB	Allocated: 0 MB
+
+IN MEMORY
+wfbp_torch_z        	torch.float16	10	12.39 s	   824 / 12792  MB	Allocated: 730 MB
+wfbp_torch_z        	torch.float16	50	10.08 s	  1202 / 12792  MB	Allocated: 730 MB
+wfbp_torch_z        	torch.float16	100	9.50 s	  1665 / 12792  MB	Allocated: 730 MB
+wfbp_torch_z        	torch.float16	500	10.20 s	  5401 / 12792  MB	Allocated: 730 MB
+wfbp_torch_z        	torch.float16	1000	10.97 s	 10072 / 14792  MB	Allocated: 730 MB
+wfbp_torch_z        	torch.float32	10	14.80 s	  1587 / 14792  MB	Allocated: 1461 MB
+wfbp_torch_z        	torch.float32	50	11.76 s	  2083 / 14792  MB	Allocated: 1461 MB
+wfbp_torch_z        	torch.float32	100	11.01 s	  2705 / 14792  MB	Allocated: 1461 MB
+wfbp_torch_z        	torch.float32	500	12.03 s	  7677 / 14792  MB	Allocated: 1461 MB
+wfbp_torch_angles   	torch.float16	10	9.40 s	  1461 / 14792  MB	Allocated: 730 MB
+wfbp_torch_angles   	torch.float16	50	9.10 s	  1091 / 14792  MB	Allocated: 730 MB
+wfbp_torch_angles   	torch.float16	100	9.07 s	  1367 / 14792  MB	Allocated: 730 MB
+wfbp_torch_angles   	torch.float16	500	9.05 s	  3604 / 14792  MB	Allocated: 730 MB
+wfbp_torch_angles   	torch.float16	1000	9.05 s	  6400 / 14792  MB	Allocated: 730 MB
+wfbp_torch_angles   	torch.float32	10	11.26 s	  1667 / 14792  MB	Allocated: 1461 MB
+wfbp_torch_angles   	torch.float32	50	10.98 s	  1922 / 14792  MB	Allocated: 1461 MB
+wfbp_torch_angles   	torch.float32	100	10.98 s	  2281 / 14792  MB	Allocated: 1461 MB
+wfbp_torch_angles   	torch.float32	500	10.93 s	  5154 / 14792  MB	Allocated: 1461 MB
+wfbp_torch_z_zxy    	torch.float16	10	10.61 s	  1461 / 14792  MB	Allocated: 730 MB
+wfbp_torch_z_zxy    	torch.float16	50	9.72 s	  1202 / 14792  MB	Allocated: 730 MB
+wfbp_torch_z_zxy    	torch.float16	100	9.32 s	  1665 / 14792  MB	Allocated: 730 MB
+wfbp_torch_z_zxy    	torch.float16	500	10.17 s	  5401 / 14792  MB	Allocated: 730 MB
+wfbp_torch_z_zxy    	torch.float16	1000	10.95 s	 10072 / 14792  MB	Allocated: 730 MB
+wfbp_torch_z_zxy    	torch.float32	10	12.10 s	  1587 / 14792  MB	Allocated: 1461 MB
+wfbp_torch_z_zxy    	torch.float32	50	11.22 s	  2083 / 14792  MB	Allocated: 1461 MB
+wfbp_torch_z_zxy    	torch.float32	100	10.75 s	  2705 / 14792  MB	Allocated: 1461 MB
+wfbp_torch_z_zxy    	torch.float32	500	11.98 s	  7677 / 14792  MB	Allocated: 1461 MB
+wfbp_torch_z_zxy_tuv	torch.float16	10	12.67 s	  1461 / 14792  MB	Allocated: 730 MB
+wfbp_torch_z_zxy_tuv	torch.float16	50	8.45 s	  1202 / 14792  MB	Allocated: 730 MB
+wfbp_torch_z_zxy_tuv	torch.float16	100	7.96 s	  1665 / 14792  MB	Allocated: 730 MB
+wfbp_torch_z_zxy_tuv	torch.float16	500	7.51 s	  5401 / 14792  MB	Allocated: 730 MB
+wfbp_torch_z_zxy_tuv	torch.float32	10	14.10 s	  1587 / 14792  MB	Allocated: 1461 MB
+wfbp_torch_z_zxy_tuv	torch.float32	50	10.05 s	  2083 / 14792  MB	Allocated: 1461 MB
+wfbp_torch_z_zxy_tuv	torch.float32	100	9.50 s	  2705 / 14792  MB	Allocated: 1461 MB
+wfbp_torch_z_zxy_tuv	torch.float32	200	9.26 s	  3948 / 14792  MB	Allocated: 1461 MB

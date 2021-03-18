@@ -18,7 +18,6 @@ def benchmark_f(f, name, dtype, recon_space, geometry, proj_data, **kwargs):
     print(f'{name.ljust(20)[:20]}', end='\t')
     print(f'{dtype}', end='\t')
     print(f'{"default" if not "t_chunk" in kwargs else kwargs.get("t_chunk")}', end='\t')
-    print(f'{dtype}', end='\t')
 
     start = perf_counter()
             
@@ -71,23 +70,33 @@ except:
 
 
 #### TORCH
+wfbp_torch_z_zxy_tuv_full
+test_list = [(wfbp_torch_z, 'wfbp_torch_z', torch.float16, [10, 50, 100, 500, 1000]),
+            (wfbp_torch_z, 'wfbp_torch_z', torch.float32, [10, 50, 100, 500]),
+            (wfbp_torch_angles, 'wfbp_torch_angles', torch.float16, [10, 50, 100, 500, 1000]),
+            (wfbp_torch_angles, 'wfbp_torch_angles', torch.float32, [10, 50, 100, 500]),
+            (wfbp_torch_full, 'wfbp_torch_full', torch.float16, [10, 20, 30, 40]),
+            (wfbp_torch_full, 'wfbp_torch_full', torch.float32, [10, 20, 30, 40]),
+            (wfbp_torch_z_zxy, 'wfbp_torch_z_zxy', torch.float16, [10, 50, 100, 500, 1000]),
+            (wfbp_torch_z_zxy, 'wfbp_torch_z_zxy', torch.float32, [10, 50, 100, 500]),
+            (wfbp_torch_z_zxy_tuv, 'wfbp_torch_z_zxy_tuv', torch.float16, [10, 50, 100, 500]),
+            (wfbp_torch_z_zxy_tuv, 'wfbp_torch_z_zxy_tuv', torch.float32, [10, 50, 100, 200]),
+            (wfbp_torch_z_zxy_tuv_full, 'wfbp_torch_z_zxy_tuv_full', torch.float16, [10, 20, 30, 40]),
+            (wfbp_torch_z_zxy_tuv_full, 'wfbp_torch_z_zxy_tuv_full', torch.float32, [10, 20, 30, 40])]
 
-test_list = [(wfbp_angles, 'ANGLES', torch.float16, [10, 50, 100, 500, 1000]),
-            (wfbp_angles, 'ANGLES', torch.float32, [10, 50, 100, 500, 1000]),
-            (wfbp_full_torch, 'ORIGINAL', torch.float16, [10, 50, 100, 500, 1000]),
-            (wfbp_full_torch, 'ORIGINAL', torch.float32, [10, 50, 100, 500, 1000])]
-
-test_list += [(wfbp_torch, 'FULL', torch.float16, [10, 20, 30, 40]),
-            (wfbp_torch, 'FULL', torch.float32, [10, 20, 30, 40])]
+test_list = [(wfbp_torch_z_zxy_tuv, 'wfbp_torch_z_zxy_tuv', torch.float16, [10, 50, 100, 500, 1000]),
+            (wfbp_torch_z_zxy_tuv, 'wfbp_torch_z_zxy_tuv', torch.float32, [10, 50, 100, 200]),
+            (wfbp_torch_z_zxy, 'wfbp_torch_z_zxy', torch.float16, [10, 50, 100, 500, 1000]),
+            (wfbp_torch_z_zxy, 'wfbp_torch_z_zxy', torch.float32, [10, 50, 100, 500])]
 
 _proj_data = proj_data
 print(f'\nPROJ SHAPE: {_proj_data.shape}')
 
-# print(f'\nLOAD TO GPU')
-# for f, name, dtype, t_chunks in test_list:
-#     for t_chunk in t_chunks:
-#         benchmark_f(f, name, dtype, reco_space,
-#                     geometry=tilted, proj_data=_proj_data, t_chunk=t_chunk)
+print(f'\nLOAD TO GPU')
+for f, name, dtype, t_chunks in test_list:
+    for t_chunk in t_chunks:
+        benchmark_f(f, name, dtype, reco_space,
+                    geometry=tilted, proj_data=_proj_data, t_chunk=t_chunk)
 
 print(f'\nIN MEMORY')
 for f, name, dtype, t_chunks in test_list:
@@ -99,15 +108,3 @@ for f, name, dtype, t_chunks in test_list:
             
         del t_proj_data
 
-# print(f'\nLOAD TO GPU')
-# for f, name, dtype in test_list:
-#     for t_chunk in [10, 50, 100, 500, 1000, 1500]
-#     benchmark_f(f, name, dtype, reco_space, geometry=tilted, proj_data=_proj_data)
-
-# print(f'\nIN MEMORY')
-# for f, name, dtype in test_list:
-#     t_proj_data = torch.tensor(_proj_data, dtype=dtype, device=torch.device('cuda'))
-#     torch.cuda.synchronize()
-#     benchmark_f(f, name, dtype, reco_space, geometry=tilted,
-#                 proj_data=t_proj_data, in_mem=True)
-#     del t_proj_data

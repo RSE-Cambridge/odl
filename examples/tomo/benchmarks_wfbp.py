@@ -15,7 +15,7 @@ print(sys.version)
 print(odl.__version__)
 
 def benchmark_f(f, name, dtype, recon_space, geometry, proj_data, **kwargs):
-    print(f'{name.ljust(20)[:20]}', end='\t')
+    print(f'{name.ljust(25)[:25]}', end='\t')
     print(f'{dtype}', end='\t')
 
     start = perf_counter()
@@ -63,18 +63,24 @@ print(f'FW done after:\t\t{(stop-start):.3f} seconds')
 
 #### TORCH
 
-test_list = [(wfbp_angles_proj_chunk, 'ANGLES Proj chunk', torch.float16),
-            (wfbp_angles_proj_chunk, 'ANGLES Proj chunk', torch.float32),
-            (wfbp_full_torch, 'ORIGINAL', torch.float16),
-            (wfbp_full_torch, 'ORIGINAL', torch.float32),
-            (wfbp_angles, 'ANGLES', torch.float16),
-            (wfbp_angles, 'ANGLES', torch.float32),
-            (w_a_last, 'Angles LAST', torch.float16),
-            (w_a_last, 'Angles LAST', torch.float32),
-            (w_a_first, 'Angles FIRST', torch.float16),
-            (w_a_first, 'Angles FIRST', torch.float32),
-            (w_angles, 'LOOP ON ANGLES', torch.float16),
-            (w_angles, 'LOOP ON ANGLES', torch.float32)]
+test_list = [(wfbp_torch_z, 'wfbp_torch_z', torch.float16),
+            (wfbp_torch_z, 'wfbp_torch_z', torch.float32),
+            (wfbp_torch_angles, 'wfbp_torch_angles', torch.float16),
+            (wfbp_torch_angles, 'wfbp_torch_angles', torch.float32),
+            (wfbp_torch_full, 'wfbp_torch_full', torch.float16),
+            (wfbp_torch_full, 'wfbp_torch_full', torch.float32),
+            (wfbp_torch_z_zxy, 'wfbp_torch_z_zxy', torch.float16),
+            (wfbp_torch_z_zxy, 'wfbp_torch_z_zxy', torch.float32),
+            (wfbp_torch_z_zxy_tuv, 'wfbp_torch_z_zxy_tuv', torch.float16),
+            (wfbp_torch_z_zxy_tuv, 'wfbp_torch_z_zxy_tuv', torch.float32),
+            (wfbp_torch_z_zxy_tuv_full, 'wfbp_torch_z_zxy_tuv_full', torch.float16),
+            (wfbp_torch_z_zxy_tuv_full, 'wfbp_torch_z_zxy_tuv_full', torch.float32),
+            (w_a_last, 'w_a_last', torch.float16),
+            (w_a_last, 'w_a_last', torch.float32),
+            (w_a_first, 'w_a_first', torch.float16),
+            (w_a_first, 'w_a_first', torch.float32),
+            (w_angles, 'w_angles', torch.float16),
+            (w_angles, 'w_angles', torch.float32)]
 
 
 _proj_data = proj_data
@@ -97,8 +103,8 @@ for f, name, dtype in test_list:
 _proj_data = np.moveaxis(proj_data, 0, 1).copy()
 print(f'\nPROJ SHAPE: {_proj_data.shape}')
 
-test_list = [(w_utv, 'LAST (u, theta, v)', torch.float16),
-            (w_utv, 'LAST (u, theta, v)', torch.float32)]
+test_list = [(w_utv, 'w_utv', torch.float16),
+            (w_utv, 'w_utv', torch.float32)]
 
 # test_list = []
 
@@ -120,10 +126,10 @@ for f, name, dtype in test_list:
 _proj_data = np.moveaxis(proj_data, 2, 0).copy()
 print(f'\nPROJ SHAPE: {_proj_data.shape}')
 
-test_list = [(w_vtu, 'LAST (v, theta, u)', torch.float16),
-            (w_vtu, 'LAST (v, theta, u)', torch.float32),
-            (w_angles_vtu, 'ANGLES (v, theta, u)', torch.float16),
-            (w_angles_vtu, 'ANGLES (v, theta, u)', torch.float32)]
+test_list = [(w_vtu, 'w_vtu', torch.float16),
+            (w_vtu, 'w_vtu', torch.float32),
+            (w_angles_vtu, 'w_angles_vtu', torch.float16),
+            (w_angles_vtu, 'w_angles_vtu', torch.float32)]
 
 # test_list = []
 print(f'\nLOAD TO GPU')
@@ -144,10 +150,10 @@ for f, name, dtype in test_list:
 _proj_data = np.moveaxis(proj_data, 2, 1).copy()
 print(f'\nPROJ SHAPE: {_proj_data.shape}')
 
-test_list = [(w_angles_tvu, 'ANGLES (theta, v, u)', torch.float16),
-            (w_angles_tvu, 'ANGLES (theta, v, u)', torch.float32),
-            (w_angles_tvu_zxy, 'ANGLES z(theta, v, u)', torch.float16),
-            (w_angles_tvu_zxy, 'ANGLES z(theta, v, u)', torch.float32)]
+test_list = [(w_angles_tvu, 'w_angles_tvu', torch.float16),
+            (w_angles_tvu, 'w_angles_tvu', torch.float32),
+            (w_angles_tvu_zxy, 'w_angles_tvu_zxy', torch.float16),
+            (w_angles_tvu_zxy, 'w_angles_tvu_zxy', torch.float32)]
 
 # test_list = []
 print(f'\nLOAD TO GPU')
