@@ -83,6 +83,12 @@ test_list = [(wfbp_torch_z, 'wfbp_torch_z', torch.float16),
             (w_angles, 'w_angles', torch.float32)]
 
 
+test_list = [(wfbp_torch_z_tuv, 'wfbp_torch_z_tuv', torch.float16),
+            (wfbp_torch_z_tuv, 'wfbp_torch_z_tuv', torch.float32),
+            (wfbp_torch_angles, 'wfbp_torch_angles', torch.float16),
+            (wfbp_torch_angles, 'wfbp_torch_angles', torch.float32)]
+
+
 _proj_data = proj_data
 print(f'\nPROJ SHAPE: {_proj_data.shape}')
 
@@ -98,77 +104,6 @@ for f, name, dtype in test_list:
     benchmark_f(f, name, dtype, reco_space, geometry=tilted,
                 proj_data=t_proj_data, in_mem=True)
     del t_proj_data
-
-### (u, theta, v)
-_proj_data = np.moveaxis(proj_data, 0, 1).copy()
-print(f'\nPROJ SHAPE: {_proj_data.shape}')
-
-test_list = [(w_utv, 'w_utv', torch.float16),
-            (w_utv, 'w_utv', torch.float32)]
-
-# test_list = []
-
-print(f'\nLOAD TO GPU')
-for f, name, dtype in test_list:
-    benchmark_f(f, name, dtype, reco_space, geometry=tilted, proj_data=_proj_data)
-
-print(f'\nIN MEMORY')
-
-for f, name, dtype in test_list:
-    t_proj_data = torch.tensor(_proj_data, dtype=dtype, device=torch.device('cuda'))
-    torch.cuda.synchronize()
-    benchmark_f(f, name, dtype, reco_space, geometry=tilted,
-                proj_data=t_proj_data, in_mem=True)
-    del t_proj_data
-
-
-### (v, theta, u)
-_proj_data = np.moveaxis(proj_data, 2, 0).copy()
-print(f'\nPROJ SHAPE: {_proj_data.shape}')
-
-test_list = [(w_vtu, 'w_vtu', torch.float16),
-            (w_vtu, 'w_vtu', torch.float32),
-            (w_angles_vtu, 'w_angles_vtu', torch.float16),
-            (w_angles_vtu, 'w_angles_vtu', torch.float32)]
-
-# test_list = []
-print(f'\nLOAD TO GPU')
-for f, name, dtype in test_list:
-    benchmark_f(f, name, dtype, reco_space, geometry=tilted, proj_data=_proj_data)
-
-print(f'\nIN MEMORY')
-
-for f, name, dtype in test_list:
-    t_proj_data = torch.tensor(_proj_data, dtype=dtype, device=torch.device('cuda'))
-    torch.cuda.synchronize()
-    benchmark_f(f, name, dtype, reco_space, geometry=tilted,
-                proj_data=t_proj_data, in_mem=True)
-    del t_proj_data
-
-
-### (theta, v, u)
-_proj_data = np.moveaxis(proj_data, 2, 1).copy()
-print(f'\nPROJ SHAPE: {_proj_data.shape}')
-
-test_list = [(w_angles_tvu, 'w_angles_tvu', torch.float16),
-            (w_angles_tvu, 'w_angles_tvu', torch.float32),
-            (w_angles_tvu_zxy, 'w_angles_tvu_zxy', torch.float16),
-            (w_angles_tvu_zxy, 'w_angles_tvu_zxy', torch.float32)]
-
-# test_list = []
-print(f'\nLOAD TO GPU')
-for f, name, dtype in test_list:
-    benchmark_f(f, name, dtype, reco_space, geometry=tilted, proj_data=_proj_data)
-
-print(f'\nIN MEMORY')
-
-for f, name, dtype in test_list:
-    t_proj_data = torch.tensor(_proj_data, dtype=dtype, device=torch.device('cuda'))
-    torch.cuda.synchronize()
-    benchmark_f(f, name, dtype, reco_space, geometry=tilted,
-                proj_data=t_proj_data, in_mem=True)
-    del t_proj_data
-
 
 
 

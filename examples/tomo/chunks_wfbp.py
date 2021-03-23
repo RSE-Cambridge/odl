@@ -25,10 +25,10 @@ def benchmark_f(f, name, dtype, recon_space, geometry, proj_data, **kwargs):
     torch.cuda.synchronize()
 
     stop = perf_counter()
-    print(f'{(stop-start):.2f} s', end='\t')
+    print(f'{(stop-start):.2f}', end='\t')
 
     print(f'{torch.cuda.max_memory_allocated(0)//(2**20)}'.rjust(6)+
-        f' / {torch.cuda.memory_reserved(0)//(2**20)}  MB', end='\t')
+        f'\t{torch.cuda.memory_reserved(0)//(2**20)}  MB', end='\t')
     print(f'Allocated: {torch.cuda.memory_allocated(0)//(2**20)} MB', end='\n')
     torch.cuda.reset_peak_memory_stats(0)
 
@@ -69,25 +69,22 @@ except:
     np.save(proj_filename, proj_data)
 
 
-#### TORCH
-wfbp_torch_z_zxy_tuv_full
-test_list = [(wfbp_torch_z, 'wfbp_torch_z', torch.float16, [10, 50, 100, 500, 1000]),
-            (wfbp_torch_z, 'wfbp_torch_z', torch.float32, [10, 50, 100, 500]),
-            (wfbp_torch_angles, 'wfbp_torch_angles', torch.float16, [10, 50, 100, 500, 1000]),
-            (wfbp_torch_angles, 'wfbp_torch_angles', torch.float32, [10, 50, 100, 500]),
-            (wfbp_torch_full, 'wfbp_torch_full', torch.float16, [10, 20, 30, 40]),
-            (wfbp_torch_full, 'wfbp_torch_full', torch.float32, [10, 20, 30, 40]),
-            (wfbp_torch_z_zxy, 'wfbp_torch_z_zxy', torch.float16, [10, 50, 100, 500, 1000]),
-            (wfbp_torch_z_zxy, 'wfbp_torch_z_zxy', torch.float32, [10, 50, 100, 500]),
-            (wfbp_torch_z_zxy_tuv, 'wfbp_torch_z_zxy_tuv', torch.float16, [10, 50, 100, 500]),
-            (wfbp_torch_z_zxy_tuv, 'wfbp_torch_z_zxy_tuv', torch.float32, [10, 50, 100, 200]),
-            (wfbp_torch_z_zxy_tuv_full, 'wfbp_torch_z_zxy_tuv_full', torch.float16, [10, 20, 30, 40]),
-            (wfbp_torch_z_zxy_tuv_full, 'wfbp_torch_z_zxy_tuv_full', torch.float32, [10, 20, 30, 40])]
+# #### TORCH
 
-test_list = [(wfbp_torch_z_zxy_tuv, 'wfbp_torch_z_zxy_tuv', torch.float16, [10, 50, 100, 500, 1000]),
-            (wfbp_torch_z_zxy_tuv, 'wfbp_torch_z_zxy_tuv', torch.float32, [10, 50, 100, 200]),
-            (wfbp_torch_z_zxy, 'wfbp_torch_z_zxy', torch.float16, [10, 50, 100, 500, 1000]),
-            (wfbp_torch_z_zxy, 'wfbp_torch_z_zxy', torch.float32, [10, 50, 100, 500])]
+# test_list = [(wfbp_torch_z, 'wfbp_torch_z', torch.float16, [10, 50, 100, 500, 1000]),
+#             (wfbp_torch_z, 'wfbp_torch_z', torch.float32, [10, 50, 100, 500]),
+#             (wfbp_torch_angles, 'wfbp_torch_angles', torch.float16, [10, 50, 100, 500, 1000]),
+#             (wfbp_torch_angles, 'wfbp_torch_angles', torch.float32, [10, 50, 100, 500]),
+#             (wfbp_torch_z_zxy, 'wfbp_torch_z_zxy', torch.float16, [10, 50, 100, 500, 1000]),
+#             (wfbp_torch_z_zxy, 'wfbp_torch_z_zxy', torch.float32, [10, 50, 100, 500]),
+#             (wfbp_torch_z_zxy_tuv, 'wfbp_torch_z_zxy_tuv', torch.float16, [10, 50, 100, 500]),
+#             (wfbp_torch_z_zxy_tuv, 'wfbp_torch_z_zxy_tuv', torch.float32, [10, 50, 100, 200])]
+
+
+test_list = [(wfbp_torch_z_tuv, 'wfbp_torch_z_tuv', torch.float16, [10, 50, 100, 500, 1000]),
+            (wfbp_torch_z_tuv, 'wfbp_torch_z_tuv', torch.float32, [10, 50, 100, 500, 1000]),
+            (wfbp_torch_angles, 'wfbp_torch_angles', torch.float16, [10, 50, 100, 500, 1000]),
+            (wfbp_torch_angles, 'wfbp_torch_angles', torch.float32, [10, 50, 100, 500, 1000])]
 
 _proj_data = proj_data
 print(f'\nPROJ SHAPE: {_proj_data.shape}')
@@ -98,7 +95,9 @@ for f, name, dtype, t_chunks in test_list:
         benchmark_f(f, name, dtype, reco_space,
                     geometry=tilted, proj_data=_proj_data, t_chunk=t_chunk)
 
+
 print(f'\nIN MEMORY')
+
 for f, name, dtype, t_chunks in test_list:
     for t_chunk in t_chunks:
         t_proj_data = torch.tensor(_proj_data, dtype=dtype, device=torch.device('cuda'))
