@@ -31,20 +31,21 @@ class TiltedBookletsGeometry(Geometry, AxisOrientedGeometry):
 
     The main difference with `ConeBeamGeometry` is in the source. It is
     not point-like but it is a 1D segment. The source lenght coincides
-    with the detector lenght and its orientation is defined by
-    the first detector axis (in the standard configuration its initial
-    orientation is ``(1, 0, 0)``). All the axial projections of the rays
-    from the source at a fixed angle have the same direction, that is
-    from the center of the source to the detecor refence point. In
-    particular this means that the direction of rays from the source to
-    a detector location is constant along the detector rows.
+    with the detector lenght and its orientation is defined by the first
+    detector axis (in the standard configuration its initial orientation
+    is ``(1, 0, 0)``). In this sense the source share the same
+    parametrisation as the first detector axis. At a fixed angle `alpha`,
+    the projections on the axial plane of the rays from the source have
+    the same planar direction, that is `(-sin(alpha), cos(alpha))`. In
+    particular, this means that the direction of rays from the source
+    to a detector location is constant along the detector rows.
 
     For details, check Stierstorfer's 2004 paper`
     <https://iopscience.iop.org/article/10.1088/0031-9155/49/11/007/meta>`_.
 
     Notes:
-    * This implementation requires the detector to be flat 2D.
-    `det_curvature_radius` should be removed.
+    * In contrast with Stierstorfer 2004, this implementation requires
+    the detector to be flat 2D. `det_curvature_radius` should be removed.
     * `src_shift_func`, `det_shift_func` are manually set to constant 0.
     Different use has not been tested.
     """
@@ -118,7 +119,7 @@ class TiltedBookletsGeometry(Geometry, AxisOrientedGeometry):
         AxisOrientedGeometry.__init__(self, axis)
 
         check_bounds = kwargs.get('check_bounds', True)
-        
+
         detector = Flat2dDetector(dpart, axes=det_axes_init,
                                   check_bounds=check_bounds)
 
@@ -141,7 +142,7 @@ class TiltedBookletsGeometry(Geometry, AxisOrientedGeometry):
         if self.motion_partition.ndim != 1:
             raise ValueError('`apart` has dimension {}, expected 1'
                              ''.format(self.motion_partition.ndim))
-        
+
         # TODO: remove these attributes or implement them correctly!
 
         self.src_shift_func = lambda x: np.array(
@@ -263,23 +264,23 @@ class TiltedBookletsGeometry(Geometry, AxisOrientedGeometry):
             refpt = refpt.squeeze()
 
         return refpt
-    
+
     def src_axis(self, angle):
         axes = self.det_axes(angle)
         return axes[...,0,:]
 
-    def src_position(self, angle, dparam):
-        """Return the source point at ``angle`` corresponding to a
-        detector location.
+    def src_position(self, angle, sparam):
+        """Return the point on the source at ``angle`` parametrised by
+        ``sparam``.
 
-        For an angle ``phi`` and detector parameters ``dparams``,
+        For an angle ``phi`` and source parameter ``sparam``,
         the source position is given by ::
 
-            src(phi, dparam) = translation +
+            src(phi, sparam) = translation +
                        rot_matrix(phi) * (-src_rad * src_to_det_init) +
                        (offset_along_axis + pitch * phi) * axis +
                        source_shift(phi) -
-                       src_axis(phi) * dparam[0]
+                       src_axis(phi) * sparam
 
         where ``src_to_det_init`` is the initial unit vector pointing
         from source to detector and
@@ -293,9 +294,8 @@ class TiltedBookletsGeometry(Geometry, AxisOrientedGeometry):
         angle : float or `array-like`
             Angle(s) in radians describing the counter-clockwise
             rotation of the detector.
-        
-        dparam : `array-like` or sequence of lenght 2 of
-            Detector parameter(s) at which to evaluate.
+
+        sparam : `array-like` of source parameters at which to evaluate.
 
         Returns
         -------
@@ -306,6 +306,8 @@ class TiltedBookletsGeometry(Geometry, AxisOrientedGeometry):
         """
         squeeze_out = (np.shape(angle) == ())
         angle = np.array(angle, dtype=float, copy=False, ndmin=1)
+        sparam = np.array(sparam, dtype=float, copy=False, ndmin=1)
+
         rot_matrix = self.rotation_matrix(angle)
         extra_dims = angle.ndim
         src_shifts = self.src_shift_func(angle)
@@ -336,13 +338,12 @@ class TiltedBookletsGeometry(Geometry, AxisOrientedGeometry):
         # in shape (a, ndim)
         pitch_component = np.multiply.outer(shift_along_axis, self.axis)
 
-        # Increment along the source axis according to dparam[0]
-        sparam = np.array(dparam[0], dtype=float, copy=False, ndmin=1)
+        # Increment along the source axis according to sparam
         source_offset = sparam[:, None] * self.src_axis(angle)
 
         # Broadcast translation along extra dimensions
         transl_slc = (None,) * extra_dims + (slice(None),)
-        
+
         refpt = (self.translation[transl_slc]
                  + circle_component
                  + pitch_component
@@ -358,7 +359,7 @@ class TiltedBookletsGeometry(Geometry, AxisOrientedGeometry):
 
         The unnormalized version of this vector is computed as follows::
 
-            vec = src_position(angle, dparam) -
+            vec = src_position(angle, dparam[0]) -
                   det_point_position(angle, dparam)
 
         Parameters
@@ -407,7 +408,7 @@ class TiltedBookletsGeometry(Geometry, AxisOrientedGeometry):
             dparam = tuple(np.array(p, dtype=float, copy=False, ndmin=1)
                            for p in dparam)
 
-        det_to_src = (self.src_position(angle, dparam) -
+        det_to_src = (self.src_position(angle, dparam[0]) -
                       self.det_point_position(angle, dparam))
 
         if normalized:
