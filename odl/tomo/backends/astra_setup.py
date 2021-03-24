@@ -398,6 +398,7 @@ def astra_conebeam_2d_geom_to_vec(geometry):
 
     return vectors
 
+
 def astra_tilted_booklets_geom_to_vec(geometry):
     """Create vectors for ASTRA projection geometries from ODL geometry.
 
@@ -434,20 +435,18 @@ def astra_tilted_booklets_geom_to_vec(geometry):
        http://www.astra-toolbox.com/docs/geom3d.html#projection-geometries
     """
     angles = geometry.angles
-    det_rows = geometry.det_partition.shape[1] # comment below :(
+    det_rows = geometry.det_partition.shape[1]
 
     vectors = np.zeros((angles.shape[-1] * det_rows, 12))
 
-
     # repeat angles to simulate 12 1-row acquisitions
     angles = np.repeat(geometry.angles, det_rows)
-    
+
     # get params of central element of detector rows
-    dparams = geometry.det_partition.grid[0,:].points().transpose()
+    dparams = geometry.det_partition.grid[0, :].points().transpose()
     dparams[0] = geometry.det_partition.mid_pt[0]
     # tile it for each acquisition
     dparams = np.tile(dparams, len(geometry.angles))
-    
 
     # Ray direction = -(detector-to-source normal vector)
     vectors[:, 0:3] = -geometry.det_to_src(angles, dparams)
@@ -460,7 +459,7 @@ def astra_tilted_booklets_geom_to_vec(geometry):
     det_axes = np.moveaxis(geometry.det_axes(angles), -2, 0)
     px_sizes = geometry.det_partition.cell_sides
     # Diffenetly from other implementation here the detector axes are
-    # not swapped. ASTRA produces `(v, theta, u)` layout, and to map 
+    # not swapped. ASTRA produces `(v, theta, u)` layout, and to map
     # to ODL layout `(theta, u, v)` a complete roll must be performed,
     # which is the worst case (compeltely discontiguous).
     vectors[:, 9:12] = det_axes[1] * px_sizes[1]
@@ -473,6 +472,7 @@ def astra_tilted_booklets_geom_to_vec(geometry):
         new_ind += [2 + 3 * i, 1 + 3 * i, 0 + 3 * i]
     vectors = vectors[:, new_ind]
     return vectors
+
 
 def astra_parallel_3d_geom_to_vec(geometry):
     """Create vectors for ASTRA projection geometries from ODL geometry.
@@ -606,7 +606,6 @@ def astra_projection_geometry(geometry):
         vec = astra_tilted_booklets_geom_to_vec(geometry)
         proj_geom = astra.create_proj_geom('parallel3d_vec', det_row_count,
                                            det_col_count, vec)
-
 
     elif (isinstance(geometry, DivergentBeamGeometry) and
           isinstance(geometry.detector, (Flat1dDetector, Flat2dDetector)) and

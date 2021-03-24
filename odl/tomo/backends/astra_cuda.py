@@ -149,8 +149,6 @@ class AstraCudaImpl:
         self.vol_array = np.empty(astra_vol_shape, dtype='float32', order='C')
         self.proj_array = np.empty(astra_proj_shape, dtype='float32',
                                    order='C')
-        
-        
 
         # Create ASTRA data structures
         vol_geom = astra_volume_geometry(self.vol_space)
@@ -242,14 +240,14 @@ class AstraCudaImpl:
                 out[:] = self.proj_array
             elif self.geometry.ndim == 3:
                 if isinstance(self.geometry, TiltedBookletsGeometry):
-                    # reshape (1, theta * rows, cols) -> (angles, rows, cols)
+                    # reshape (1, angles * rows, cols) -> (angles, rows, cols)
                     tmp = self.proj_array.reshape((self.proj_space.shape[0],
-                        self.proj_space.shape[2],self.proj_space.shape[1]))
+                                                   self.proj_space.shape[2],
+                                                   self.proj_space.shape[1]))
                     # mvaxis (angles, rows, cols) -> (angles, cols, rows)
                     tmp = np.moveaxis(tmp, 1, 2)
-                    out[:] = tmp.reshape(
-                        self.proj_space.shape)
-                
+                    out[:] = tmp.reshape(self.proj_space.shape)
+
                 else:
                     # Swap (cols, angles, rows) -> (angles, cols, rows)
                     out[:] = np.swapaxes(self.proj_array, 0, 1).reshape(
@@ -308,8 +306,9 @@ class AstraCudaImpl:
                     # reshape (angles, cols, rows) -> (1, angles * rows, cols)
                     shape = (1, shape[0]*shape[2], shape[1])
                     reshaped_proj_data = swapped_proj_data.reshape(shape)
-                    swapped_proj_data = np.ascontiguousarray(reshaped_proj_data)
-                
+                    swapped_proj_data = np.ascontiguousarray(
+                        reshaped_proj_data)
+
                 else:
                     # Reshape to (angles, cols, rows)
                     reshaped_proj_data = proj_data.asarray().reshape(shape)

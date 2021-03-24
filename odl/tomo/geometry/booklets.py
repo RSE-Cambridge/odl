@@ -12,6 +12,7 @@ from odl.util import array_str, indent, signature_string
 
 __all__ = ('TiltedBookletsGeometry',)
 
+
 class TiltedBookletsGeometry(Geometry, AxisOrientedGeometry):
     """Tilted booklets geometry with circular/helical source curve.
 
@@ -55,6 +56,7 @@ class TiltedBookletsGeometry(Geometry, AxisOrientedGeometry):
                            src_axis_init=(1, 0, 0))
     # TODO: remove unused or not implemented attributes:
     # det_curvature_radius, src_shift_func, det_shift_func
+
     def __init__(self, apart, dpart, src_radius, det_radius,
                  det_curvature_radius=None, pitch=0, axis=(0, 0, 1),
                  src_shift_func=None, det_shift_func=None, **kwargs):
@@ -146,9 +148,9 @@ class TiltedBookletsGeometry(Geometry, AxisOrientedGeometry):
         # TODO: remove these attributes or implement them correctly!
 
         self.src_shift_func = lambda x: np.array(
-                [0.0, 0.0, 0.0], dtype=float, ndmin=2)
+            [0.0, 0.0, 0.0], dtype=float, ndmin=2)
         self.det_shift_func = lambda x: np.array(
-                [0.0, 0.0, 0.0], dtype=float, ndmin=2)
+            [0.0, 0.0, 0.0], dtype=float, ndmin=2)
 
     @property
     def src_radius(self):
@@ -186,14 +188,12 @@ class TiltedBookletsGeometry(Geometry, AxisOrientedGeometry):
         """Discrete angles given in this geometry."""
         return self.motion_grid.coord_vectors[0]
 
-
     def det_axes(self, angle):
         # Transpose to take dot along axis 1
         axes = self.rotation_matrix(angle).dot(self.det_axes_init.T)
         # `axes` has shape (a, 3, 2), need to roll the last dimensions
         # to the second-to-last place
         return np.rollaxis(axes, -1, -2)
-
 
     def det_refpoint(self, angle):
         """Return the detector reference point position at ``angle``.
@@ -267,7 +267,7 @@ class TiltedBookletsGeometry(Geometry, AxisOrientedGeometry):
 
     def src_axis(self, angle):
         axes = self.det_axes(angle)
-        return axes[...,0,:]
+        return axes[..., 0, :]
 
     def src_position(self, angle, sparam):
         """Return the point on the source at ``angle`` parametrised by
@@ -326,7 +326,6 @@ class TiltedBookletsGeometry(Geometry, AxisOrientedGeometry):
         circle_component = np.einsum('...ij,...j->...i',
                                      rot_matrix, center_to_src_init)
 
-
         # Increment along the rotation axis according to pitch and
         # offset_along_axis
         # `shift_along_axis` has shape angles.shape
@@ -353,7 +352,7 @@ class TiltedBookletsGeometry(Geometry, AxisOrientedGeometry):
 
         return refpt
 
-    def det_to_src(self, angle, dparam=(0,0), normalized=True):
+    def det_to_src(self, angle, dparam=(0, 0), normalized=True):
         """Vector or direction from a detector location to the
         corresponding source point.
 
@@ -483,17 +482,17 @@ class TiltedBookletsGeometry(Geometry, AxisOrientedGeometry):
         dpart = part.byaxis[1:]
 
         return TiltedBookletsGeometry(apart, dpart,
-                                src_radius=self.src_radius,
-                                det_radius=self.det_radius,
-                                det_curvature_radius=self.det_curvature_radius,
-                                pitch=self.pitch,
-                                axis=self.axis,
-                                offset_along_axis=self.offset_along_axis,
-                                src_to_det_init=self._src_to_det_init_arg,
-                                det_axes_init=self._det_axes_init_arg,
-                                src_shift_func=self.src_shift_func,
-                                det_shift_func=self.det_shift_func,
-                                translation=self.translation)
+                                      src_radius=self.src_radius,
+                                      det_radius=self.det_radius,
+                                      det_curvature_radius=self.det_curvature_radius,
+                                      pitch=self.pitch,
+                                      axis=self.axis,
+                                      offset_along_axis=self.offset_along_axis,
+                                      src_to_det_init=self._src_to_det_init_arg,
+                                      det_axes_init=self._det_axes_init_arg,
+                                      src_shift_func=self.src_shift_func,
+                                      det_shift_func=self.det_shift_func,
+                                      translation=self.translation)
 
     # Manually override the abstract method in `Geometry` since it's found
     # first
