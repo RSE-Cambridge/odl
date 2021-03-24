@@ -10,104 +10,9 @@ from odl.tomo.geometry.detector import Flat2dDetector
 from odl.util import array_str, indent, signature_string
 
 
-__all__ = ('BookletsGeometry', 'TiltedBookletsGeometry')
+__all__ = ('TiltedBookletsGeometry',)
 
-class BookletsGeometry(Geometry):
-
-    """Abstract booklets beam geometry class.
-
-    A geometry characterized by the presence of a segment-like source.
-    """
-
-    def src_position(self, angle, dparam):
-        """Source position function.
-
-        Parameters
-        ----------
-        angle : `array-like` or sequence
-            Motion parameter(s) at which to evaluate. If
-            ``motion_params.ndim >= 2``, a sequence of that length must be
-            provided.
-        dparam : `array-like` or sequence
-            Detector parameter(s) at which to evaluate. If
-            ``det_params.ndim >= 2``, a sequence of that length must be
-            provided.
-
-        Returns
-        -------
-        pos : `numpy.ndarray`
-            Vector(s) pointing from the origin to the source point.
-        """
-        raise NotImplementedError('abstract method')
-
-    def det_to_src(self, angle, dparam=(0,0), normalized=True):
-        """Vector or direction from a detector location to the
-        corresponding source point.
-
-        The unnormalized version of this vector is computed as follows::
-
-            vec = src_position(angle, dparam) -
-                  det_point_position(angle, dparam)
-
-        Parameters
-        ----------
-        angle : `array-like` or sequence
-            One or several (Euler) angles in radians at which to
-            evaluate. If ``motion_params.ndim >= 2``, a sequence of that
-            length must be provided.
-        dparam : `array-like` or sequence
-            Detector parameter(s) at which to evaluate. If
-            ``det_params.ndim >= 2``, a sequence of that length must be
-            provided.
-
-        Returns
-        -------
-        det_to_src : `numpy.ndarray`
-            Vector(s) pointing from a detector point to the corresponding
-            source point.
-            The shape of the returned array is obtained from the
-            (broadcast) shapes of ``angle`` and ``dparam``, and
-            broadcasting is supported within both parameters and between
-            them. The precise definition of the shape is
-            ``broadcast(bcast_angle, bcast_dparam).shape + (ndim,)``,
-            where ``bcast_angle`` is
-
-            - ``angle`` if `motion_params` is 1D,
-            - ``broadcast(*angle)`` otherwise,
-
-            and ``bcast_dparam`` defined analogously.
-        """
-        # Always call the downstream methods with vectorized arguments
-        # to be able to reliably manipulate the final axes of the result
-        if self.motion_params.ndim == 1:
-            squeeze_angle = (np.shape(angle) == ())
-            angle = np.array(angle, dtype=float, copy=False, ndmin=1)
-        else:
-            squeeze_angle = (np.broadcast(*angle).shape == ())
-            angle = tuple(np.array(a, dtype=float, copy=False, ndmin=1)
-                          for a in angle)
-
-        if self.det_params.ndim == 1:
-            squeeze_dparam = (np.shape(dparam) == ())
-            dparam = np.array(dparam, dtype=float, copy=False, ndmin=1)
-        else:
-            squeeze_dparam = (np.broadcast(*dparam).shape == ())
-            dparam = tuple(np.array(p, dtype=float, copy=False, ndmin=1)
-                           for p in dparam)
-
-        det_to_src = (self.src_position(angle, dparam) -
-                      self.det_point_position(angle, dparam))
-
-        if normalized:
-            det_to_src /= np.linalg.norm(det_to_src, axis=-1, keepdims=True)
-
-        if squeeze_angle and squeeze_dparam:
-            det_to_src = det_to_src.squeeze()
-
-        return det_to_src
-
-
-class TiltedBookletsGeometry(BookletsGeometry, AxisOrientedGeometry):
+class TiltedBookletsGeometry(Geometry, AxisOrientedGeometry):
     """Tilted booklets geometry with circular/helical source curve.
 
     This class shares most of its features with `ConeBeamGeometry`:
@@ -141,7 +46,7 @@ class TiltedBookletsGeometry(BookletsGeometry, AxisOrientedGeometry):
     * This implementation requires the detector to be flat 2D.
     `det_curvature_radius` should be removed.
     * `src_shift_func`, `det_shift_func` are manually set to constant 0.
-    Their use has not been tested.
+    Different use has not been tested.
     """
     _default_config = dict(axis=(0, 0, 1),
                            src_to_det_init=(0, 1, 0),
@@ -447,6 +352,72 @@ class TiltedBookletsGeometry(BookletsGeometry, AxisOrientedGeometry):
 
         return refpt
 
+    def det_to_src(self, angle, dparam=(0,0), normalized=True):
+        """Vector or direction from a detector location to the
+        corresponding source point.
+
+        The unnormalized version of this vector is computed as follows::
+
+            vec = src_position(angle, dparam) -
+                  det_point_position(angle, dparam)
+
+        Parameters
+        ----------
+        angle : `array-like` or sequence
+            One or several (Euler) angles in radians at which to
+            evaluate. If ``motion_params.ndim >= 2``, a sequence of that
+            length must be provided.
+        dparam : `array-like` or sequence
+            Detector parameter(s) at which to evaluate. If
+            ``det_params.ndim >= 2``, a sequence of that length must be
+            provided.
+
+        Returns
+        -------
+        det_to_src : `numpy.ndarray`
+            Vector(s) pointing from a detector point to the corresponding
+            source point.
+            The shape of the returned array is obtained from the
+            (broadcast) shapes of ``angle`` and ``dparam``, and
+            broadcasting is supported within both parameters and between
+            them. The precise definition of the shape is
+            ``broadcast(bcast_angle, bcast_dparam).shape + (ndim,)``,
+            where ``bcast_angle`` is
+
+            - ``angle`` if `motion_params` is 1D,
+            - ``broadcast(*angle)`` otherwise,
+
+            and ``bcast_dparam`` defined analogously.
+        """
+        # Always call the downstream methods with vectorized arguments
+        # to be able to reliably manipulate the final axes of the result
+        if self.motion_params.ndim == 1:
+            squeeze_angle = (np.shape(angle) == ())
+            angle = np.array(angle, dtype=float, copy=False, ndmin=1)
+        else:
+            squeeze_angle = (np.broadcast(*angle).shape == ())
+            angle = tuple(np.array(a, dtype=float, copy=False, ndmin=1)
+                          for a in angle)
+
+        if self.det_params.ndim == 1:
+            squeeze_dparam = (np.shape(dparam) == ())
+            dparam = np.array(dparam, dtype=float, copy=False, ndmin=1)
+        else:
+            squeeze_dparam = (np.broadcast(*dparam).shape == ())
+            dparam = tuple(np.array(p, dtype=float, copy=False, ndmin=1)
+                           for p in dparam)
+
+        det_to_src = (self.src_position(angle, dparam) -
+                      self.det_point_position(angle, dparam))
+
+        if normalized:
+            det_to_src /= np.linalg.norm(det_to_src, axis=-1, keepdims=True)
+
+        if squeeze_angle and squeeze_dparam:
+            det_to_src = det_to_src.squeeze()
+
+        return det_to_src
+
     def __repr__(self):
         """Return ``repr(self)``."""
         posargs = [self.motion_partition, self.det_partition]
@@ -476,7 +447,6 @@ class TiltedBookletsGeometry(BookletsGeometry, AxisOrientedGeometry):
 
         sig_str = signature_string(posargs, optargs, sep=',\n')
         return '{}(\n{}\n)'.format(self.__class__.__name__, indent(sig_str))
-
 
     def __getitem__(self, indices):
         """Return self[indices].
