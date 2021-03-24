@@ -1,4 +1,4 @@
-"""Siemens geometry classes."""
+"""Tilted Booklets geometry classes."""
 
 from __future__ import print_function, division, absolute_import
 import numpy as np
@@ -16,7 +16,7 @@ class BookletsGeometry(Geometry):
 
     """Abstract booklets beam geometry class.
 
-    A geometry characterized by the presence of a segment-like ray source.
+    A geometry characterized by the presence of a segment-like source.
     """
 
     def src_position(self, angle, dparam):
@@ -63,8 +63,8 @@ class BookletsGeometry(Geometry):
         Returns
         -------
         det_to_src : `numpy.ndarray`
-            Vector(s) pointing from a detector point to the source (at
-            infinity).
+            Vector(s) pointing from a detector point to the corresponding
+            source point.
             The shape of the returned array is obtained from the
             (broadcast) shapes of ``angle`` and ``dparam``, and
             broadcasting is supported within both parameters and between
@@ -108,11 +108,47 @@ class BookletsGeometry(Geometry):
 
 
 class TiltedBookletsGeometry(BookletsGeometry, AxisOrientedGeometry):
+    """Tilted booklets geometry with circular/helical source curve.
+
+    This class shares most of its features with `ConeBeamGeometry`:
+    The source moves along a spiral oriented along a fixed ``axis``, with
+    radius ``src_radius`` in the azimuthal plane and a given ``pitch``.
+    The detector reference point is opposite to the source, i.e. in
+    the point at distance ``src_rad + det_rad`` on the line in the
+    azimuthal plane through the source point and ``axis``.
+
+    The motion parameter is the 1d rotation angle parameterizing source
+    and detector positions simultaneously.
+
+    In the standard configuration, the rotation axis is ``(0, 0, 1)``,
+    the initial source-to-detector vector is ``(0, 1, 0)``, and the
+    initial detector axes are ``[(1, 0, 0), (0, 0, 1)]``.
+
+    The main difference with `ConeBeamGeometry` is in the source. It is
+    not point-like but it is a 1D segment. The source lenght coincides
+    with the detector lenght and its orientation is defined by
+    the first detector axis (in the standard configuration its initial
+    orientation is ``(1, 0, 0)``). All the axial projections of the rays
+    from the source at a fixed angle have the same direction, that is
+    from the center of the source to the detecor refence point. In
+    particular this means that the direction of rays from the source to
+    a detector location is constant along the detector rows.
+
+    For details, check Stierstorfer's 2004 paper`
+    <https://iopscience.iop.org/article/10.1088/0031-9155/49/11/007/meta>`_.
+
+    Notes:
+    * This implementation requires the detector to be flat 2D.
+    `det_curvature_radius` should be removed.
+    * `src_shift_func`, `det_shift_func` are manually set to constant 0.
+    Their use has not been tested.
+    """
     _default_config = dict(axis=(0, 0, 1),
                            src_to_det_init=(0, 1, 0),
                            det_axes_init=((1, 0, 0), (0, 0, 1)),
                            src_axis_init=(1, 0, 0))
-    # TODO: remove unused attributes (det_curvature_radius, src_shift_func, det_shift_func)
+    # TODO: remove unused or not implemented attributes:
+    # det_curvature_radius, src_shift_func, det_shift_func
     def __init__(self, apart, dpart, src_radius, det_radius,
                  det_curvature_radius=None, pitch=0, axis=(0, 0, 1),
                  src_shift_func=None, det_shift_func=None, **kwargs):
@@ -254,6 +290,35 @@ class TiltedBookletsGeometry(BookletsGeometry, AxisOrientedGeometry):
 
 
     def det_refpoint(self, angle):
+        """Return the detector reference point position at ``angle``.
+
+        For an angle ``phi``, the detector position is given by ::
+
+            det_ref(phi) = translation +
+                           rot_matrix(phi) * (det_rad * src_to_det_init) +
+                           (offset_along_axis + pitch * phi) * axis +
+                           detector_shift(phi)
+
+        where ``src_to_det_init`` is the initial unit vector pointing
+        from source to detector and
+            detector_shift(phi) = rot_matrix(phi) *
+                                  (shift1 * src_to_det_init +
+                                  shift2 * cross(-src_to_det_init, axis))
+                                  shift3 * axis
+
+        Parameters
+        ----------
+        angle : float or `array-like`
+            Angle(s) in radians describing the counter-clockwise
+            rotation of the detector.
+
+        Returns
+        -------
+        refpt : `numpy.ndarray`
+            Vector(s) pointing from the origin to the detector reference
+            point. If ``angle`` is a single parameter, the returned array
+            has shape ``(3,)``, otherwise ``angle.shape + (3,)``.
+        """
         squeeze_out = (np.shape(angle) == ())
         angle = np.array(angle, dtype=float, copy=False, ndmin=1)
         rot_matrix = self.rotation_matrix(angle)
@@ -367,7 +432,6 @@ class TiltedBookletsGeometry(BookletsGeometry, AxisOrientedGeometry):
         pitch_component = np.multiply.outer(shift_along_axis, self.axis)
 
         # Increment along the source axis according to dparam[0]
-        ## TODO rm comments and check dparam shape!!!!
         sparam = np.array(dparam[0], dtype=float, copy=False, ndmin=1)
         source_offset = sparam[:, None] * self.src_axis(angle)
 
