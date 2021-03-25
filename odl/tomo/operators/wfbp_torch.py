@@ -1,44 +1,63 @@
 
 from __future__ import absolute_import, division, print_function
 
-from collections import OrderedDict
 
 import numpy as np
 import torch
 import torch.nn.functional as F
 
 
-from odl.discr import DiscretizedSpace
-from odl.tomo.geometry import Geometry
-
 def wfbp_torch_angles(recon_space, geometry, proj_data,
-                dtype=torch.float32, in_mem=False, t_chunk=100):
+                      dtype=torch.float32, in_mem=False, t_chunk=100):
     """
-    Torch implementation of Siemens BP - Angles chunked, loop over angles
+    Torch implementation of Siemens BP.
+    Check Stierstorfer's 2004 paper: `
+    <https://iopscience.iop.org/article/10.1088/0031-9155/49/11/007/meta>`_.
+
+    For each voxel in the reconstruction space x, y, z and for each
+    acquisition angle theta:
+    - Get the parameters (u, v) in the detector local coordinates of
+     the voxel projection at angle theta.
+    - Compute the indices (iu, iv) of the corresponding detector cell
+     (set to -1 if out of bound).
+    Up to a weighting function on the detector rows and a normalisation
+    factor (not implemented yet), the reconstruction value on a voxel
+    is obtained summing the detecor acquisitions at (iu, iv) over all
+    theta (equation 13 in the paper).
 
     Notes:
-    * Tested on det: (736,64) angles: 500 volume: (512,512,96)
-      ~ 1.39 s (~1.15 s float16)
-    * indices memory layout: (angles, x, y, z)
-    * Return V_tot - memory layout: (x, y, z)
+    * Tested on det: (736,64); angles: 500; volume: (512,512,96);
+      ~ 1.39 s (~1.15 s float16).
+    * indices memory layout: (angles, x, y, z).
+    * The channel indices of a projection ``iu`` do not depend on z.
+      That is why _ius has shape (angles, x, y, 1).
+    * This is not the case for the row indices ``iv``. These are
+      computed inside the for loop one angle a time.
     """
     cuda = torch.device('cuda')
 
     V_tot = torch.zeros(recon_space.shape, dtype=dtype, device=cuda)
 
-    R = geometry.det_radius + geometry.src_radius
-
     u_min, v_min = geometry.det_partition.min_pt
     u_max, v_max = geometry.det_partition.max_pt
     u_cell, v_cell = geometry.det_partition.cell_sides
-    
+
+    det_to_src = geometry.det_radius + geometry.src_radius
+    # Chunk workload to speed up computation for high humber of angles
     for i_angle in range(0, geometry.angles.shape[0], t_chunk):
-        # Chuncking projection data speed up computation for high humber of angles 
+        # Check if projection data is already a Torch tensor and load
+        # it on GPU. Pad the last dimension of projection data with
+        # zeros to deal with out of bound indices.
         if isinstance(proj_data, torch.Tensor):
             _proj_data = proj_data[i_angle:i_angle+t_chunk].cuda()
-            _proj_data = F.pad(_proj_data, (0,1), mode='constant', value=0)
+            _proj_data = F.pad(_proj_data,
+                               (0,1),
+                               mode='constant',
+                               value=0)
         else:
-            _proj_data = np.pad(proj_data[i_angle:i_angle+t_chunk], [(0,0),(0,0),(0,1)], mode='constant')
+            _proj_data = np.pad(proj_data[i_angle:i_angle+t_chunk],
+                                [(0,0),(0,0),(0,1)],
+                                mode='constant')
             _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
 
         x, y, z = recon_space.grid.coord_vectors
@@ -47,18 +66,27 @@ def wfbp_torch_angles(recon_space, geometry, proj_data,
         z = torch.tensor(z, dtype=dtype, device=cuda)
         z = z.reshape((1, 1, -1))
 
+        # Load a chunk of angles
         angles = torch.tensor(geometry.angles[i_angle:i_angle+t_chunk],
                               dtype=dtype, device=cuda)
+        # Compute the z coordinates of the acquisition points
+        zs_src = (angles * geometry.pitch / (2 * np.pi)
+                  + geometry.offset_along_axis)
 
-        zs_src = angles * geometry.pitch / (2 * np.pi) + geometry.offset_along_axis
-
+        # For each angle theta, compute (u, l) the coordinates on the
+        # axial plane of the voxels after clockwise rotation by theta.
         # shapes: (angles, x, 1, 1) + (angles, 1, y, 1) -> (angles, x, y, 1)
-        us = (torch.outer(torch.cos(angles), x).reshape((angles.shape[0], x.shape[0], 1, 1)) +
-            torch.outer(torch.sin(angles), y).reshape((angles.shape[0], 1, y.shape[0], 1)))
-        ls = (torch.outer(-torch.sin(angles), x).reshape((angles.shape[0], x.shape[0], 1, 1)) +
-            torch.outer(torch.cos(angles), y).reshape((angles.shape[0], 1, y.shape[0], 1)))
+        us = (torch.outer(torch.cos(angles), x).reshape((angles.shape[0], x.shape[0], 1, 1))
+              + torch.outer(torch.sin(angles), y).reshape((angles.shape[0], 1, y.shape[0], 1)))
+        ls = (torch.outer(-torch.sin(angles), x).reshape((angles.shape[0], x.shape[0], 1, 1))
+              + torch.outer(torch.cos(angles), y).reshape((angles.shape[0], 1, y.shape[0], 1)))
         ls += geometry.src_radius
+        # u = first detector parameter (channel direction) of voxels'
+        #     projections at angle theta
+        # l = distance between voxels and the source at angle theta on
+        #     the axial plane
 
+        # Get the channel indices of the projections
         _ius = ((us - u_min) // u_cell).to(torch.int64)
         del us, x, y
 
@@ -66,99 +94,23 @@ def wfbp_torch_angles(recon_space, geometry, proj_data,
         i_v_max = torch.tensor(proj_data.shape[2], dtype=dtype)
         i_repalce = torch.tensor(-1, dtype=dtype)
 
+        # Loop on angles
         for i in range(angles.shape[0]):
+            # Load the channel indices at angle theta
             ius = _ius[i]
-            vs = (z - zs_src[i]) * R / ls[i]
-
+            # Compute the second detector parameter (row direction) of
+            # voxels' projections at angle theta
+            vs = (z - zs_src[i]) * det_to_src / ls[i]
+            # Get the channel indices of the projections
             _ivs = (vs - v_min) / v_cell
+            # Replace out of bound indices with -1
             mask = _ivs < i_v_min
             mask += _ivs >= i_v_max
             _ivs.masked_fill_( mask , i_repalce)
+            # Convert to long int
             ivs = _ivs.to(torch.int64)
-
+            # Sum projection data over angles (eq. 13)
             V_tot += _proj_data[i,ius,ivs]
-
-    if in_mem:
-        return V_tot
-    else:
-        return V_tot.cpu()
-
-def wfbp_torch_z_tuv(recon_space, geometry, proj_data,
-                    dtype=torch.float32, in_mem=False, t_chunk=100):
-    """
-    Torch implementation of Siemens BP - Angles chunked, loop over z
-
-    Notes:
-    * indices memory layout: (angles, x, y)
-    * Return V_tot - memory layout: (x, y, z)
-    """
-
-    cuda = torch.device('cuda')
-
-    V_tot = torch.zeros(recon_space.shape, dtype=dtype, device=cuda)
-
-    R = geometry.det_radius + geometry.src_radius
-
-    u_min, v_min = geometry.det_partition.min_pt
-    u_max, v_max = geometry.det_partition.max_pt
-    u_cell, v_cell = geometry.det_partition.cell_sides
-
-    i_v_min = torch.tensor(0, dtype=dtype)
-    i_v_max = torch.tensor(proj_data.shape[2], dtype=dtype)
-    i_repalce = torch.tensor(-1, dtype=dtype)
-
-    for i_angle in range(0, geometry.angles.shape[0], t_chunk):
-        # Why this has to be inside the for loop? If not:
-        # UnboundLocalError: local variable 'x' referenced before assignment
-        x, y, z = recon_space.grid.coord_vectors
-        x = torch.tensor(x, dtype=dtype, device=cuda)
-        y = torch.tensor(y, dtype=dtype, device=cuda)
-        z = torch.tensor(z, dtype=dtype, device=cuda)
-
-        angles = torch.tensor(geometry.angles[i_angle:i_angle+t_chunk], dtype=dtype, device=cuda)
-        V = torch.empty((x.shape[0],y.shape[0],angles.shape[0]), dtype=dtype, device=cuda)
-
-        zs_src = angles * geometry.pitch / (2 * np.pi) + geometry.offset_along_axis
-        zs_src = zs_src.reshape((-1,1,1))
-
-        if isinstance(proj_data, torch.Tensor):
-            _proj_data = proj_data[i_angle:i_angle+t_chunk].cuda()
-            _proj_data = F.pad(_proj_data, (0,1), mode='constant', value=0)
-        else:
-            _proj_data = np.pad(proj_data[i_angle:i_angle+t_chunk],
-                                [(0,0),(0,0),(0,1)], mode='constant')
-            _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
-
-        # ithetas = np.tile(np.arange(angles.shape[0]), (x.shape[0],y.shape[0],1))
-        ithetas = np.arange(angles.shape[0]).reshape((-1,1,1))
-        ithetas = torch.tensor(ithetas, dtype=torch.int64, device=cuda)
-
-
-        # shapes: (angles, x, 1) + (angles, 1, y) -> (angles, x, y)
-        us = (torch.outer(torch.cos(angles), x).reshape((angles.shape[0],x.shape[0],1)) +
-            torch.outer(torch.sin(angles), y).reshape((angles.shape[0],1,y.shape[0])))
-        ls = (torch.outer(-torch.sin(angles), x).reshape((angles.shape[0],x.shape[0],1)) +
-            torch.outer(torch.cos(angles), y).reshape((angles.shape[0],1,y.shape[0])))
-        ls += geometry.src_radius
-        # get grid indices
-        ius = ((us - u_min) // u_cell).to(torch.int64)
-        del us, x, y
-
-        ratio = R / ls
-        del ls
-
-
-        # split z to avoid memory problems:
-        for i,_z in enumerate(z):
-            vs = (_z - zs_src) * ratio
-            _ivs = ((vs - v_min) / v_cell)
-            mask = _ivs < i_v_min
-            mask += _ivs >= i_v_max
-            _ivs.masked_fill_( mask , i_repalce)
-            ivs = _ivs.to(torch.int64)
-
-            V = _proj_data[ithetas,ius,ivs]
-            V_tot[:,:,i] += torch.sum(V, axis=0)
 
     if in_mem:
         return V_tot
