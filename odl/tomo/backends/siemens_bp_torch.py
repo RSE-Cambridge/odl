@@ -6,9 +6,10 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
+__all__ = ('siemens_bp',)
 
-def wfbp_torch_angles(recon_space, geometry, proj_data,
-                      dtype=torch.float32, in_mem=False, t_chunk=100):
+def siemens_bp(reco_space, geometry, proj_data,
+               dtype=torch.float32, in_mem=False, angle_chunk=100):
     """
     Torch implementation of Siemens BP.
     Check Stierstorfer's 2004 paper: `
@@ -36,7 +37,7 @@ def wfbp_torch_angles(recon_space, geometry, proj_data,
     """
     cuda = torch.device('cuda')
 
-    V_tot = torch.zeros(recon_space.shape, dtype=dtype, device=cuda)
+    V_tot = torch.zeros(reco_space.shape, dtype=dtype, device=cuda)
 
     u_min, v_min = geometry.det_partition.min_pt
     u_max, v_max = geometry.det_partition.max_pt
@@ -44,30 +45,30 @@ def wfbp_torch_angles(recon_space, geometry, proj_data,
 
     det_to_src = geometry.det_radius + geometry.src_radius
     # Chunk workload to speed up computation for high humber of angles
-    for i_angle in range(0, geometry.angles.shape[0], t_chunk):
+    for i_angle in range(0, geometry.angles.shape[0], angle_chunk):
         # Check if projection data is already a Torch tensor and load
         # it on GPU. Pad the last dimension of projection data with
         # zeros to deal with out of bound indices.
         if isinstance(proj_data, torch.Tensor):
-            _proj_data = proj_data[i_angle:i_angle+t_chunk].cuda()
+            _proj_data = proj_data[i_angle:i_angle+angle_chunk].cuda()
             _proj_data = F.pad(_proj_data,
                                (0,1),
                                mode='constant',
                                value=0)
         else:
-            _proj_data = np.pad(proj_data[i_angle:i_angle+t_chunk],
+            _proj_data = np.pad(proj_data[i_angle:i_angle+angle_chunk],
                                 [(0,0),(0,0),(0,1)],
                                 mode='constant')
             _proj_data = torch.tensor(_proj_data, dtype=dtype, device=cuda)
 
-        x, y, z = recon_space.grid.coord_vectors
+        x, y, z = reco_space.grid.coord_vectors
         x = torch.tensor(x, dtype=dtype, device=cuda)
         y = torch.tensor(y, dtype=dtype, device=cuda)
         z = torch.tensor(z, dtype=dtype, device=cuda)
         z = z.reshape((1, 1, -1))
 
         # Load a chunk of angles
-        angles = torch.tensor(geometry.angles[i_angle:i_angle+t_chunk],
+        angles = torch.tensor(geometry.angles[i_angle:i_angle+angle_chunk],
                               dtype=dtype, device=cuda)
         # Compute the z coordinates of the acquisition points
         zs_src = (angles * geometry.pitch / (2 * np.pi)
