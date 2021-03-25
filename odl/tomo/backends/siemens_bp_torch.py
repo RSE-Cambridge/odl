@@ -18,9 +18,9 @@ def siemens_bp(reco_space, geometry, proj_data,
     For each voxel in the reconstruction space x, y, z and for each
     acquisition angle theta:
     - Get the parameters (u, v) in the detector local coordinates of
-     the voxel projection at angle theta.
+        the voxel projection at angle theta.
     - Compute the indices (iu, iv) of the corresponding detector cell
-     (set to -1 if out of bound).
+        (set to -1 if out of bound).
     Up to a weighting function on the detector rows and a normalisation
     factor (not implemented yet), the reconstruction value on a voxel
     is obtained summing the detecor acquisitions at (iu, iv) over all
@@ -28,12 +28,35 @@ def siemens_bp(reco_space, geometry, proj_data,
 
     Notes:
     * Tested on det: (736,64); angles: 500; volume: (512,512,96);
-      ~ 1.39 s (~1.15 s float16).
+        ~ 1.39 s (~1.15 s float16).
     * indices memory layout: (angles, x, y, z).
     * The channel indices of a projection ``iu`` do not depend on z.
-      That is why _ius has shape (angles, x, y, 1).
+        That is why _ius has shape (angles, x, y, 1).
     * This is not the case for the row indices ``iv``. These are
-      computed inside the for loop one angle a time.
+        computed inside the for loop one angle a time.
+
+    Parameters
+    ----------
+    reco_space : `DiscretizedSpace`
+        Discretized reconstruction space, the domain of the forward
+        operator or the range of the adjoint (back-projection).
+    geometry : `Geometry`
+        The projection geometry to use.
+    proj_data : `array-like` of shape (n_angles, det_cols, det_rows)
+        Sinogram (projections) to backproject.
+    dtype : `torch.dtype`, optional
+        The desired type to use to compute the reconstruction.
+        Default: torch.float32.
+    out_device : `torch.device`, optional
+        The desired device of returned tensor. Default: CPU.
+    angle_chunk : `int` element, optional
+        The size of a chunk of data when iterating over angles.
+        Default: 100.
+
+    Returns
+    -------
+    V_tot : `torch.Tensor`
+        Result of the back-projection.
     """
     cuda = torch.device('cuda')
 
