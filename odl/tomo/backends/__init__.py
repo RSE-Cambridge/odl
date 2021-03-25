@@ -13,6 +13,7 @@ from __future__ import absolute_import
 from .astra_cpu import *
 from .astra_cuda import *
 from .astra_setup import *
+from .siemens_bp_torch import *
 from .skimage_radon import *
 from .util import *
 
@@ -22,3 +23,4 @@ __all__ += astra_cuda.__all__
 __all__ += astra_setup.__all__
 __all__ += util.__all__
 __all__ += skimage_radon.__all__
+__all__ += siemens_bp_torch.__all__
