@@ -9,7 +9,7 @@ import torch.nn.functional as F
 __all__ = ('siemens_bp',)
 
 def siemens_bp(reco_space, geometry, proj_data,
-               dtype=torch.float32, in_mem=False, angle_chunk=100):
+               dtype=torch.float32, out_device=None, angle_chunk=100):
     """
     Torch implementation of Siemens BP.
     Check Stierstorfer's 2004 paper: `
@@ -37,6 +37,9 @@ def siemens_bp(reco_space, geometry, proj_data,
     """
     cuda = torch.device('cuda')
 
+    if not isinstance(out_device, torch.device):
+        out_device = torch.device('cpu')
+    
     V_tot = torch.zeros(reco_space.shape, dtype=dtype, device=cuda)
 
     u_min, v_min = geometry.det_partition.min_pt
@@ -113,7 +116,4 @@ def siemens_bp(reco_space, geometry, proj_data,
             # Sum projection data over angles (eq. 13)
             V_tot += _proj_data[i,ius,ivs]
 
-    if in_mem:
-        return V_tot
-    else:
-        return V_tot.cpu()
+    return V_tot.to(device=out_device)
